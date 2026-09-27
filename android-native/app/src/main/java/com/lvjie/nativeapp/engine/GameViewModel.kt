@@ -459,9 +459,9 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
             val text = buf.toString()
             if (text.isNotEmpty()) {
                 val lines = text.lines().map { it.trim() }
-                val opts = lines.filter { it.matches(Regex("^[0-9]+[.、)）].+")) }
-                    .map { it.replaceFirst(Regex("^[0-9]+[.、)）]\\s*"), "") }
-                val cleaned = lines.filterNot { it.matches(Regex("^[0-9]+[.、)）].+")) }.joinToString("\n")
+                val optRe = Regex("""^\s*\d+[\.\uFF0E、\)）]\s*(.+)$""")
+                val opts = lines.mapNotNull { line -> optRe.find(line.trim())?.groupValues?.getOrNull(1) }
+                val cleaned = lines.filterNot { optRe.matches(it.trim()) }.joinToString("\n")
                 _event.update {
                     it?.copy(
                         fullText = cleaned.ifEmpty { text },
@@ -540,9 +540,11 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
                 }
             } else s.quests
 
+            val pg = if (ev.progressGain == 0 && ev.fromLlm) 8 else ev.progressGain
+            val mg = if (ev.moneyGain == 0 && ev.fromLlm) 5 else ev.moneyGain
             s.copy(
-                progress = s.progress + ev.progressGain,
-                money = s.money + ev.moneyGain,
+                progress = s.progress + pg,
+                money = s.money + mg,
                 inventory = inv,
                 quests = quests,
                 events = if (ev.progressGain >= 20) {
@@ -597,6 +599,8 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun dismissBreakthrough() { _breakthrough.value = null }
+    fun debugHint(msg: String) = pushFeedback(msg)
+
     fun clearFeedback() { _feedback.value = null }
 
     private fun pushFeedback(msg: String, big: Boolean = false) {
