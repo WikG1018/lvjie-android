@@ -72,6 +72,7 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
     val modelList: StateFlow<List<String>> = _modelList.asStateFlow()
 
     private var streamJob: Job? = null
+    private var loadJob: Job? = null
     private var eventCount = 0
 
     init {
@@ -84,11 +85,10 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             saves.loadCustomPacksOnce()
         }
-        viewModelScope.launch {
-            // 读取上次存档（activeWorldId 为 Flow，取一次即可）
-            val activeId = saves.activeWorldId
-                .first()
-                .ifBlank { "xiuxian" }
+        loadJob = viewModelScope.launch {
+            saves.loadCustomPacksOnce()
+            saves.customPacksFlow.value.forEach { WorldPacks.registerCustom(it) }
+            val activeId = saves.activeWorldId.first().ifBlank { "xiuxian" }
             val restored = saves.readSave(activeId)
                 ?: WorldPacks.all.firstNotNullOfOrNull { saves.readSave(it.id) }
             if (restored != null) {
@@ -103,7 +103,11 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
         _world.value = WorldPacks.byId(id)
     }
 
-    fun startGame(worldId: String, name: String = "林逸") {
+    fun startGame(worldId: String, name: String = "林逸", forceNew: Boolean = true) {
+        if (loadJob?.isActive == true && forceNew) {
+            pushFeedback("正在读取存档…")
+            return
+        }
         val pack = WorldPacks.byId(worldId)
         _world.value = pack
         _state.value = SampleContent.newGame(worldId, name)
@@ -113,14 +117,61 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
         syncBgm()
     }
 
+    /** 有存档则续玩，否则开新档 */
+    fun startOrContinue(worldId: String, name: String = "林逸") {
+        viewModelScope.launch {
+            val existing = saves.readSave(worldId)
+            if (existing != null) {
+                _state.value = existing
+                _world.value = WorldPacks.byId(existing.worldId)
+                _event.value = null
+                eventCount = 0
+                pushFeedback("已载入《${_world.value.name}》存档 · ${existing.name}")
+            } else {
+                val pack = WorldPacks.byId(worldId)
+                _world.value = pack
+                _state.value = SampleContent.newGame(worldId, name)
+                _event.value = null
+                eventCount = 0
+                persist()
+                pushFeedback("已开始新旅程")
+            }
+            syncBgm()
+        }
+    }
+
+    fun continueLast() {
+        viewModelScope.launch {
+            val activeId = saves.activeWorldId.first().ifBlank { "xiuxian" }
+            val existing = saves.readSave(activeId)
+                ?: WorldPacks.all.firstNotNullOfOrNull { saves.readSave(it.id) }
+            if (existing != null) {
+                _state.value = existing
+                _world.value = WorldPacks.byId(existing.worldId)
+                _event.value = null
+                eventCount = 0
+                pushFeedback("继续《${_world.value.name}》· ${existing.name}")
+                syncBgm()
+            } else {
+                pushFeedback("暂无存档，请开始旅程")
+            }
+        }
+    }
+
     fun syncBgm() {
         bgm.setEnabled(_state.value.bgm)
     }
 
     override fun onCleared() {
-        super.onCleared()
-        persist()
+        // 先落盘再 super，避免 scope 取消导致丢档
+        try {
+            val s = _state.value
+            kotlinx.coroutines.runBlocking {
+                saves.writeSave(s)
+            }
+        } catch (_: Throwable) { }
         bgm.stop()
+        super.onCleared()
     }
 
     fun persist() {
@@ -170,7 +221,10 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
 
     fun saveLlmConfig(baseUrl: String, model: String, apiKey: String, protocol: String) {
         val cfg = LlmConfig(baseUrl, apiKey, model, protocol)
-        viewModelScope.launch { creds.save(cfg) }
+        viewModelScope.launch {
+            creds.save(cfg)
+            pushFeedback("API 配置已保存")
+        }
         _llmConfig.value = cfg
     }
 
@@ -247,11 +301,13 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
         val id = _state.value.worldId
         viewModelScope.launch {
             saves.deleteSave(id)
+            // 写入该世界默认档，避免启动时恢复到其它世界
             val fallback = SampleContent.newGame(id)
+            saves.writeSave(fallback)
             _state.value = fallback
             _event.value = null
             eventCount = 0
-            pushFeedback("《${_world.value.name}》存档已删除")
+            pushFeedback("《${_world.value.name}》存档已重置")
             onDone?.invoke()
         }
     }
@@ -259,8 +315,10 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
     /** 自定义世界包：保存草稿并可选用 */
     fun saveCustomPack(id: String, name: String, tagline: String, tiers: List<String>, placeNames: List<String>) {
         viewModelScope.launch {
+            val cp = com.lvjie.nativeapp.data.CustomPack(id, name, tagline, tiers, placeNames)
             saves.saveCustomPack(id, name, tagline, tiers, placeNames)
-            pushFeedback("自定义世界「$name」已保存，可在世界列表选用")
+            WorldPacks.registerCustom(cp)
+            pushFeedback("自定义世界「$name」已保存并可开局")
         }
     }
 
@@ -274,6 +332,11 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
 
         /** 与 NPC 交谈：提升好感，必要时结识为同伴 */
     fun talkWith(name: String) {
+        val ev = _event.value
+        if (ev?.loading == true || ev?.streaming == true) {
+            pushFeedback("事件进行中，请先结束")
+            return
+        }
         val s = _state.value
         val existing = s.friends.indexOfFirst { it.name == name }
         val updated = if (existing >= 0) {
@@ -331,6 +394,7 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
     private fun streamLocal(full: String) {
         streamJob?.cancel()
         streamJob = viewModelScope.launch {
+            maybeForceEnd()
             delay(280)
             var i = 0
             while (i < full.length) {
@@ -356,29 +420,40 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
                 appendLine("你是开放世界文字游戏「旅界」的叙事引擎。世界观：${w.name}（${w.tagline}）。")
                 appendLine("玩家 ${s.name}，等级 ${w.tiers.getOrElse(s.tierIndex) { "?" }}，进度 ${s.progress}/${WorldPacks.tierReq.getOrElse(s.tierIndex + 1) { 9999 }}。")
                 appendLine("地点：${loc?.name ?: ""} — ${loc?.desc ?: ""}")
-                appendLine("行动风格：${s.aiStyle}。用中文写 2~4 段叙事，结尾给出 2~3 个可选行动（每行一个，以 1. 2. 3. 开头）。")
+                appendLine("行动风格：${s.aiStyle}。")
+                val langInstr = when (s.lang) {
+                    "繁體中文" -> "用繁體中文書寫"
+                    "English" -> "Write in English"
+                    "日本語" -> "日本語で書いてください"
+                    else -> "用简体中文书写"
+                }
+                appendLine(langInstr + "，2~4 段叙事，结尾给出 2~3 个可选行动（每行一个，以 1. 2. 3. 开头）。")
                 append("不要输出 JSON。")
             }
             val user = custom?.let { "玩家自由行动：$it" } ?: "行动：${actionId}"
 
             val buf = StringBuilder()
-            llm.stream(_llmConfig.value, system, user)
-                .catch { e ->
-                    // 失败回退本地
-                    val beats = SampleContent.beatsFor(actionId)
-                    val beat = beats.random()
-                    _event.value = EventUi(
-                        kind = "事件", count = eventCount, fullText = beat.text, shownText = "",
-                        options = beat.options, streaming = true, loading = true,
-                        progressGain = beat.progress, moneyGain = beat.money, itemGain = beat.item,
-                    )
-                    streamLocal(beat.text)
-                    pushFeedback("LLM 不可用，已切换本地剧情")
-                }
-                .collect { piece ->
-                    buf.append(piece)
-                    _event.update { it?.copy(shownText = buf.toString(), loading = false) }
-                }
+            var failed = false
+            try {
+                llm.stream(_llmConfig.value, system, user)
+                    .collect { piece ->
+                        buf.append(piece)
+                        _event.update { it?.copy(shownText = buf.toString(), loading = false) }
+                    }
+            } catch (e: Throwable) {
+                // 失败回退本地；本协程不再继续解析
+                failed = true
+                val beats = SampleContent.beatsFor(actionId)
+                val beat = beats.random()
+                _event.value = EventUi(
+                    kind = "事件", count = eventCount, fullText = beat.text, shownText = "",
+                    options = beat.options, streaming = true, loading = true,
+                    progressGain = beat.progress, moneyGain = beat.money, itemGain = beat.item,
+                )
+                streamLocal(beat.text)
+                pushFeedback("LLM 不可用，已切换本地剧情")
+            }
+            if (failed) return@launch
 
             // 完成后解析选项
             val text = buf.toString()
@@ -408,7 +483,35 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
         val ev = _event.value ?: return
         if (ev.streaming) return
         val label = ev.options.getOrNull(index) ?: return
+        // 先结算本轮收益，再进入下一轮
+        settleCurrentEventGains(ev)
         startEvent("travel", "以果决的方式回应：$label")
+    }
+
+    private fun settleCurrentEventGains(ev: EventUi) {
+        if (ev.progressGain == 0 && ev.moneyGain == 0 && ev.itemGain == null) return
+        _state.update { s ->
+            var inv = s.inventory
+            val item = ev.itemGain
+            if (item != null) {
+                val idx = inv.indexOfFirst { it.name == item }
+                inv = if (idx >= 0) {
+                    val old = inv[idx]
+                    inv.toMutableList().also { it[idx] = old.copy(count = old.count + 1) }
+                } else inv + InventoryItem(item, "consumable", 1, "事件所得")
+            }
+            s.copy(
+                progress = s.progress + ev.progressGain,
+                money = s.money + ev.moneyGain,
+                inventory = inv,
+            )
+        }
+    }
+
+    private fun maybeForceEnd() {
+        if (_state.value.dialogLimit && eventCount > 0 && eventCount % 10 == 0) {
+            pushFeedback("已达约 10 轮，建议结束事件收束剧情")
+        }
     }
 
     fun endEvent() {
@@ -460,7 +563,14 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
 
     fun canBreakthrough(): Boolean {
         val s = _state.value
-        return s.tierIndex < 5 && s.progress >= WorldPacks.tierReq.getOrElse(s.tierIndex + 1) { Int.MAX_VALUE }
+        val maxTier = _world.value.tiers.lastIndex
+        return s.tierIndex < maxTier && s.progress >= reqOf(s.tierIndex)
+    }
+
+    private fun reqOf(tierIndex: Int): Int {
+        val req = WorldPacks.tierReq
+        // 用全局阶梯近似；不足则用末档
+        return req.getOrElse(tierIndex + 1) { req.last() }
     }
 
     fun breakthrough() {
@@ -472,7 +582,7 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
         _state.update { s ->
             val next = (s.tierIndex + 1).coerceAtMost(pack.tiers.lastIndex)
             s.copy(
-                tierIndex = s.tierIndex + 1,
+                tierIndex = next,
                 sub = 0,
                 progress = 0,
                 power = s.power + 400 + s.tierIndex * 200,
