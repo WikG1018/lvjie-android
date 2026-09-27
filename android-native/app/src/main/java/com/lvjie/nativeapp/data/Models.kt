@@ -322,7 +322,7 @@ object SampleContent {
         return PlayerState(
             worldId = worldId,
             name = name,
-            tierIndex = 1,
+            tierIndex = minOf(1, pack.tiers.lastIndex.coerceAtLeast(0)),
             sub = 1,
             progress = 310,
             money = 320,
@@ -344,7 +344,7 @@ object SampleContent {
                 Friend("青云道人", "师长", 60, pack.places.getOrElse(1) { pack.places.first() }.name, "引你入门的恩师。"),
             ),
             events = listOf(
-                BigEvent("12 岁", "于${pack.places.first().name}${pack.advance}至${pack.tiers[1]}"),
+                BigEvent("12 岁", "于${pack.places.first().name}${pack.advance}至${pack.tiers.getOrElse(1) { pack.tiers.last() }}"),
                 BigEvent("11 岁", "拜入外门"),
                 BigEvent("10 岁", pack.startText),
             ),
