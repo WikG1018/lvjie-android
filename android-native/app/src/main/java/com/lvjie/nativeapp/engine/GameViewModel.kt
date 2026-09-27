@@ -79,6 +79,9 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
             creds.configFlow.collect { _llmConfig.value = it }
         }
         viewModelScope.launch {
+            saves.loadCustomPacksOnce()
+        }
+        viewModelScope.launch {
             // 读取上次存档（activeWorldId 为 Flow，取一次即可）
             val activeId = saves.activeWorldId
                 .first()
@@ -172,28 +175,83 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    fun exportSaves(): StateFlow<String?> {
-        val out = MutableStateFlow<String?>(null)
+    private val _exportJson = MutableStateFlow<String?>(null)
+    val exportJson: StateFlow<String?> = _exportJson.asStateFlow()
+
+    fun clearExportJson() { _exportJson.value = null }
+
+    /** 导出全部世界存档 JSON（不含 API Key），供分享/复制 */
+    fun exportSaves() {
         viewModelScope.launch {
-            out.value = saves.exportBundle()
-            pushFeedback("已导出 ${out.value?.length ?: 0} 字符存档 JSON")
+            val json = saves.exportBundle()
+            _exportJson.value = json
+            pushFeedback("已生成存档 JSON（${json.length} 字符），可分享或复制")
         }
-        return out
     }
 
+    /** 导入存档 JSON（支持 {saves:{...}} 或单份 PlayerState） */
     fun importSaves(raw: String) {
         viewModelScope.launch {
-            val n = saves.importBundle(raw)
-            pushFeedback("已导入 $n 个世界存档")
+            if (raw.isBlank()) {
+                pushFeedback("导入内容为空")
+                return@launch
+            }
+            val n = saves.importBundle(raw.trim())
+            if (n > 0) {
+                // 刷新当前内存态
+                val restored = saves.readSave(_state.value.worldId)
+                    ?: saves.readSave(_world.value.id)
+                if (restored != null) {
+                    _state.value = restored
+                    _world.value = WorldPacks.byId(restored.worldId)
+                }
+                pushFeedback("已导入 $n 个世界存档")
+            } else {
+                // 尝试单份 PlayerState
+                val single = runCatching {
+                    kotlinx.serialization.json.Json { ignoreUnknownKeys = true }
+                        .decodeFromString(PlayerState.serializer(), raw.trim())
+                }.getOrNull()
+                if (single != null) {
+                    saves.writeSave(single)
+                    _state.value = single
+                    _world.value = WorldPacks.byId(single.worldId)
+                    pushFeedback("已导入存档：${single.name}")
+                } else {
+                    pushFeedback("无法解析存档 JSON")
+                }
+            }
         }
     }
 
-    fun deleteCurrentSave() {
+    /** 删除当前世界存档并回到初始欢迎态 */
+    fun deleteCurrentSave(onDone: (() -> Unit)? = null) {
         val id = _state.value.worldId
         viewModelScope.launch {
             saves.deleteSave(id)
-            pushFeedback("存档已删除")
+            val fallback = SampleContent.newGame(id)
+            _state.value = fallback
+            _event.value = null
+            eventCount = 0
+            pushFeedback("《${_world.value.name}》存档已删除")
+            onDone?.invoke()
         }
+    }
+
+    /** 自定义世界包：保存草稿并可选用 */
+    fun saveCustomPack(id: String, name: String, tagline: String, tiers: List<String>, placeNames: List<String>) {
+        viewModelScope.launch {
+            saves.saveCustomPack(id, name, tagline, tiers, placeNames)
+            pushFeedback("自定义世界「$name」已保存，可在世界列表选用")
+        }
+    }
+
+    val customPacks: StateFlow<List<com.lvjie.nativeapp.data.CustomPack>> = saves.customPacksFlow
+
+    fun setLang(lang: String) {
+        _state.update { it.copy(lang = lang) }
+        viewModelScope.launch { saves.setLang(lang) }
+        persist()
     }
 
     fun startEvent(actionId: String, custom: String? = null) {
