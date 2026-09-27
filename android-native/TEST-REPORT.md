@@ -50,3 +50,24 @@
 
 ## 结论
 **可以发版 v1.1.0**。P0 全关，测试 5/5 PASS。
+
+---
+
+# v1.1.1 回归测试（2026-09-28）
+
+| 用例 | 结果 |
+|------|------|
+| 构建 assembleDebug+Release | PASS |
+| APK 13MB / 无字体 / 含 BGM | PASS |
+| badging 1.1.1 vc6 | PASS |
+| 签名 | PASS |
+| 暗色主题 | PASS |
+| 游戏返回确认 | PASS |
+| 分享失败保留导出 | PASS |
+| API Key 显隐 | PASS |
+| 工坊动态进度 | PASS |
+| 空输入提示 | PASS |
+| 选项解析正则 | PASS |
+| LLM 早结保底收益 | PASS |
+
+**结论：v1.1.1 可发版。P2 主要项已关闭。**
