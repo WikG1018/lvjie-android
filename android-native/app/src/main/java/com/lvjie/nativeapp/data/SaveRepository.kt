@@ -84,6 +84,47 @@ class SaveRepository(private val context: Context) {
         return map.size
     }
 
+    // 自定义世界包
+    private val _customPacks = kotlinx.coroutines.flow.MutableStateFlow<List<CustomPack>>(emptyList())
+    val customPacksFlow: kotlinx.coroutines.flow.StateFlow<List<CustomPack>> = _customPacks
+
+    init {
+        // 启动时加载一次自定义包
+    }
+
+    suspend fun loadCustomPacksOnce() {
+        val raw = context.dataStore.data.first()[Keys.customPacks]
+        if (!raw.isNullOrBlank()) {
+            val list = runCatching {
+                json.decodeFromString(kotlinx.serialization.builtins.ListSerializer(CustomPack.serializer()), raw)
+            }.getOrDefault(emptyList())
+            _customPacks.value = list
+        }
+    }
+
+    suspend fun saveCustomPack(id: String, name: String, tagline: String, tiers: List<String>, placeNames: List<String>) {
+        val cur = _customPacks.value.filterNot { it.id == id }
+        val next = cur + CustomPack(id, name, tagline, tiers, placeNames)
+        _customPacks.value = next
+        context.dataStore.edit { prefs ->
+            prefs[Keys.customPacks] = json.encodeToString(
+                kotlinx.serialization.builtins.ListSerializer(CustomPack.serializer()),
+                next,
+            )
+        }
+    }
+
+    suspend fun deleteCustomPack(id: String) {
+        val next = _customPacks.value.filterNot { it.id == id }
+        _customPacks.value = next
+        context.dataStore.edit { prefs ->
+            prefs[Keys.customPacks] = json.encodeToString(
+                kotlinx.serialization.builtins.ListSerializer(CustomPack.serializer()),
+                next,
+            )
+        }
+    }
+
     // 全局偏好
     val prefsFlow: Flow<GlobalPrefs> = context.dataStore.data.map { p ->
         GlobalPrefs(
