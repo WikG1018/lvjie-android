@@ -26,7 +26,7 @@ enum class GameTab(val label: String, val icon: String) {
 }
 
 @Composable
-fun GameBottomBar(current: GameTab, onSelect: (GameTab) -> Unit) {
+fun GameBottomBar(current: GameTab, onSelect: (GameTab) -> Unit, strings: com.lvjie.nativeapp.i18n.UiStrings = com.lvjie.nativeapp.i18n.I18n.of("简体中文")) {
     val c = LocalLvjieColors.current
     NavigationBar(
         containerColor = c.surface.copy(alpha = 0.92f),
@@ -34,11 +34,18 @@ fun GameBottomBar(current: GameTab, onSelect: (GameTab) -> Unit) {
     ) {
         GameTab.entries.forEach { tab ->
             val selected = tab == current
+            val label = when (tab) {
+                GameTab.Scene -> strings.scene
+                GameTab.Map -> strings.map
+                GameTab.Profile -> strings.profile
+                GameTab.Bag -> strings.bag
+                GameTab.Settings -> strings.me
+            }
             NavigationBarItem(
                 selected = selected,
                 onClick = { onSelect(tab) },
                 icon = { Text(tab.icon, fontSize = 18.sp) },
-                label = { Text(tab.label, fontSize = 10.sp, fontWeight = FontWeight.SemiBold) },
+                label = { Text(label, fontSize = 10.sp, fontWeight = FontWeight.SemiBold) },
                 colors = NavigationBarItemDefaults.colors(
                     selectedIconColor = c.world.deep,
                     selectedTextColor = c.world.deep,
