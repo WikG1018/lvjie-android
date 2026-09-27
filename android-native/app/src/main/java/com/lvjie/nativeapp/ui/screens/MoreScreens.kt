@@ -56,45 +56,72 @@ fun DetailScreen(pack: WorldPack, onStart: () -> Unit) {
                 }
             }
         }
-        item {
-            LvjieCard {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("这个世界怎么玩", fontSize = 15.sp, fontWeight = FontWeight.Bold)
-                    Spacer(Modifier.width(8.dp))
-                    Box(Modifier.size(7.dp).clip(CircleShape).background(c.world.accent))
+        if (tab == 0) {
+            item {
+                LvjieCard {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("这个世界怎么玩", fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                        Spacer(Modifier.width(8.dp))
+                        Box(Modifier.size(7.dp).clip(CircleShape).background(c.world.accent))
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        "行动、对话、自由输入，AI 生成剧情并回写数值。等级名为「${pack.level}」，进度为「${pack.progress}」，货币为「${pack.money}」。",
+                        color = c.ink2, fontSize = 13.sp, lineHeight = 22.sp,
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    Text("主题标语", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = c.ink3)
+                    Text(pack.tagline, color = c.ink2, fontSize = 13.sp)
                 }
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    "行动、对话、自由输入，AI 生成剧情并回写数值。等级名为「${pack.level}」，进度为「${pack.progress}」，货币为「${pack.money}」。",
-                    color = c.ink2, fontSize = 13.sp, lineHeight = 22.sp,
-                )
             }
         }
-        item {
-            LvjieCard {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("等级表", fontSize = 15.sp, fontWeight = FontWeight.Bold)
-                    Spacer(Modifier.width(8.dp))
-                    Box(Modifier.size(7.dp).clip(CircleShape).background(c.world.accent))
-                }
-                Spacer(Modifier.height(10.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
-                    pack.tiers.forEachIndexed { i, t ->
-                        LvjieChip(t, selected = i == 1)
+        if (tab == 1) {
+            item {
+                LvjieCard {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("等级表 · 6 阶", fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                        Spacer(Modifier.width(8.dp))
+                        Box(Modifier.size(7.dp).clip(CircleShape).background(c.world.accent))
+                    }
+                    Spacer(Modifier.height(10.dp))
+                    pack.tiers.forEachIndexed { i, tierName ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            LvjieChip("第 ${i + 1} 阶", selected = i == 1)
+                            Spacer(Modifier.width(10.dp))
+                            Text(tierName, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                            Spacer(Modifier.weight(1f))
+                            Text(
+                                if (i == pack.tiers.lastIndex) "巅峰" else "${(i + 1) * 100} ${pack.progress}",
+                                color = c.ink3,
+                                fontSize = 11.sp,
+                            )
+                        }
                     }
                 }
             }
         }
-        item {
-            LvjieCard {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("地点预览", fontSize = 15.sp, fontWeight = FontWeight.Bold)
-                    Spacer(Modifier.width(8.dp))
-                    Box(Modifier.size(7.dp).clip(CircleShape).background(c.world.accent))
-                }
-                Spacer(Modifier.height(10.dp))
-                pack.places.take(3).forEach { p ->
-                    ListItem(icon = "📍", title = p.name, subtitle = "${p.type} · ${p.world}", modifier = Modifier.padding(vertical = 4.dp))
+        if (tab == 2) {
+            item {
+                LvjieCard {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("地点预览 · ${pack.places.size}", fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                        Spacer(Modifier.width(8.dp))
+                        Box(Modifier.size(7.dp).clip(CircleShape).background(c.world.accent))
+                    }
+                    Spacer(Modifier.height(10.dp))
+                    pack.places.forEach { p ->
+                        ListItem(
+                            icon = "📍",
+                            title = p.name,
+                            subtitle = "${p.type} · ${p.world} · ${p.desc.take(16)}…",
+                            modifier = Modifier.padding(vertical = 4.dp),
+                        )
+                    }
                 }
             }
         }
@@ -109,9 +136,11 @@ fun DetailScreen(pack: WorldPack, onStart: () -> Unit) {
 
 /** P03 自定义世界工坊（四步向导） */
 @Composable
-fun AuthorScreen() {
+fun AuthorScreen(onSaved: (name: String, tagline: String, tiers: List<String>, places: List<String>) -> Unit = { _, _, _, _ -> }) {
     val c = LocalLvjieColors.current
     var step by remember { mutableStateOf(1) }
+    var waName by remember { mutableStateOf("凡人修仙传") }
+    var waTag by remember { mutableStateOf("凡人流修仙，资质平平的少年靠机缘与谋略步步登天。") }
     val steps = listOf("来源", "设定", "生成", "微调")
 
     LazyColumn(
@@ -171,7 +200,7 @@ fun AuthorScreen() {
                     Text("书名 / 世界名", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = c.ink3)
                     Spacer(Modifier.height(6.dp))
                     OutlinedTextField(
-                        value = "凡人修仙传", onValueChange = {}, modifier = Modifier.fillMaxWidth(),
+                        value = waName, onValueChange = { waName = it }, modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(Radius.Md), singleLine = true,
                     )
                     Spacer(Modifier.height(12.dp))
@@ -221,7 +250,10 @@ fun AuthorScreen() {
                     Spacer(Modifier.height(12.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         LvjieButton("返回修改", onClick = { step = 2 }, style = BtnStyle.Ghost, small = true)
-                        LvjieButton("保存世界", onClick = { step = 1 }, small = true)
+                        LvjieButton("保存世界", onClick = {
+                        onSaved(waName, waTag, listOf("练气","筑基","金丹","元婴","化神","渡劫"), listOf("起点","山门","坊市","秘境"))
+                        step = 1
+                    }, small = true)
                     }
                 }
             }
