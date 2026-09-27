@@ -92,6 +92,7 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
             val restored = saves.readSave(activeId)
                 ?: WorldPacks.all.firstNotNullOfOrNull { saves.readSave(it.id) }
             if (restored != null) {
+                _hasSave.value = true
                 _state.value = restored
                 _world.value = WorldPacks.byId(restored.worldId)
             }
@@ -114,14 +115,20 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
         _event.value = null
         eventCount = 0
         persist()
+        _hasSave.value = true
         syncBgm()
     }
 
     /** 有存档则续玩，否则开新档 */
     fun startOrContinue(worldId: String, name: String = "林逸") {
+        if (loadJob?.isActive == true) {
+            pushFeedback("正在读取存档…")
+            return
+        }
         viewModelScope.launch {
             val existing = saves.readSave(worldId)
             if (existing != null) {
+                _hasSave.value = true
                 _state.value = existing
                 _world.value = WorldPacks.byId(existing.worldId)
                 _event.value = null
@@ -134,6 +141,7 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
                 _event.value = null
                 eventCount = 0
                 persist()
+                _hasSave.value = true
                 pushFeedback("已开始新旅程")
             }
             syncBgm()
@@ -141,11 +149,16 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun continueLast() {
+        if (loadJob?.isActive == true) {
+            pushFeedback("正在读取存档…")
+            return
+        }
         viewModelScope.launch {
             val activeId = saves.activeWorldId.first().ifBlank { "xiuxian" }
             val existing = saves.readSave(activeId)
                 ?: WorldPacks.all.firstNotNullOfOrNull { saves.readSave(it.id) }
             if (existing != null) {
+                _hasSave.value = true
                 _state.value = existing
                 _world.value = WorldPacks.byId(existing.worldId)
                 _event.value = null
@@ -187,15 +200,18 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun useItem(index: Int) {
-        val item = _state.value.inventory.getOrNull(index) ?: return
-        if (item.type != "consumable") return
-        val gain = item.value.takeIf { it > 0 } ?: 20
-        val inv = _state.value.inventory.toMutableList()
-        val updated = item.copy(count = item.count - 1)
-        if (updated.count <= 0) inv.removeAt(index) else inv[index] = updated
-        _state.update { it.copy(progress = it.progress + gain, inventory = inv) }
-        pushFeedback("使用 ${item.name} · ${_world.value.progress} +$gain")
-        persist()
+        var feedback: String? = null
+        _state.update { s ->
+            val item = s.inventory.getOrNull(index) ?: return@update s
+            if (item.type != "consumable") return@update s
+            val gain = item.value.takeIf { it > 0 } ?: 20
+            val inv = s.inventory.toMutableList()
+            val updated = item.copy(count = item.count - 1)
+            if (updated.count <= 0) inv.removeAt(index) else inv[index] = updated
+            feedback = "使用 ${item.name} · ${_world.value.progress} +$gain"
+            s.copy(progress = s.progress + gain, inventory = inv)
+        }
+        feedback?.let { pushFeedback(it); persist() }
     }
 
     fun toggleLimit() {
@@ -247,6 +263,10 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    private val saveJson = kotlinx.serialization.json.Json { ignoreUnknownKeys = true }
+    private val _hasSave = MutableStateFlow(false)
+    val hasSave: StateFlow<Boolean> = _hasSave.asStateFlow()
+
     private val _exportJson = MutableStateFlow<String?>(null)
     val exportJson: StateFlow<String?> = _exportJson.asStateFlow()
 
@@ -281,16 +301,15 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
             } else {
                 // 尝试单份 PlayerState
                 val single = runCatching {
-                    kotlinx.serialization.json.Json { ignoreUnknownKeys = true }
-                        .decodeFromString(PlayerState.serializer(), raw.trim())
+                    saveJson.decodeFromString(PlayerState.serializer(), raw.trim())
                 }.getOrNull()
-                if (single != null) {
+                if (single != null && single.worldId.isNotBlank() && single.name.isNotBlank()) {
                     saves.writeSave(single)
                     _state.value = single
                     _world.value = WorldPacks.byId(single.worldId)
                     pushFeedback("已导入存档：${single.name}")
                 } else {
-                    pushFeedback("无法解析存档 JSON")
+                    pushFeedback("无法解析存档 JSON 或字段非法")
                 }
             }
         }
@@ -307,16 +326,23 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
             _state.value = fallback
             _event.value = null
             eventCount = 0
-            pushFeedback("《${_world.value.name}》存档已重置")
+            _hasSave.value = true
+            pushFeedback("《${_world.value.name}》已重置为初始存档")
             onDone?.invoke()
         }
     }
 
     /** 自定义世界包：保存草稿并可选用 */
     fun saveCustomPack(id: String, name: String, tagline: String, tiers: List<String>, placeNames: List<String>) {
+        val safeTiers = tiers.filter { it.isNotBlank() }.ifEmpty { listOf("初期", "中期", "后期") }
+        val safePlaces = placeNames.filter { it.isNotBlank() }.ifEmpty { listOf("起点") }
+        if (name.isBlank()) {
+            pushFeedback("世界名不能为空")
+            return
+        }
         viewModelScope.launch {
-            val cp = com.lvjie.nativeapp.data.CustomPack(id, name, tagline, tiers, placeNames)
-            saves.saveCustomPack(id, name, tagline, tiers, placeNames)
+            val cp = com.lvjie.nativeapp.data.CustomPack(id, name, tagline, safeTiers, safePlaces)
+            saves.saveCustomPack(id, name, tagline, safeTiers, safePlaces)
             WorldPacks.registerCustom(cp)
             pushFeedback("自定义世界「$name」已保存并可开局")
         }
@@ -360,7 +386,10 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
 
     fun startEvent(actionId: String, custom: String? = null) {
         val cur = _event.value
-        if (cur?.loading == true || cur?.streaming == true) return
+        if (cur?.loading == true || cur?.streaming == true) {
+            pushFeedback("事件生成中，请稍候")
+            return
+        }
         val pack = _world.value
         eventCount += 1
         val kind = custom?.let { "自由行动" }
@@ -440,6 +469,9 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
                         buf.append(piece)
                         _event.update { it?.copy(shownText = buf.toString(), loading = false) }
                     }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                // 协程取消（如 endEvent）不是 LLM 失败，必须上抛
+                throw e
             } catch (e: Throwable) {
                 // 失败回退本地；本协程不再继续解析
                 failed = true
@@ -506,6 +538,7 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
                 inventory = inv,
             )
         }
+        persist()
     }
 
     private fun maybeForceEnd() {
@@ -517,6 +550,7 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
     fun endEvent() {
         val ev = _event.value ?: return
         streamJob?.cancel()
+        streamJob = null
         var itemAdded = false
         _state.update { s ->
             var inv = s.inventory
