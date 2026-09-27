@@ -14,7 +14,12 @@ import com.lvjie.nativeapp.data.InventoryItem
 import com.lvjie.nativeapp.llm.CredentialsRepository
 import com.lvjie.nativeapp.llm.LlmConfig
 import com.lvjie.nativeapp.llm.LlmService
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.contentOrNull
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -333,6 +338,86 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /** 自定义世界包：保存草稿并可选用 */
+    data class WorldDraft(
+        val name: String,
+        val tagline: String,
+        val tiers: List<String>,
+        val places: List<String>,
+        val rules: String = "",
+    )
+
+    private val _draft = MutableStateFlow<WorldDraft?>(null)
+    val draft: StateFlow<WorldDraft?> = _draft.asStateFlow()
+    private val _draftProgress = MutableStateFlow(0f)
+    val draftProgress: StateFlow<Float> = _draftProgress.asStateFlow()
+
+    /** 用 LLM 生成世界包草稿；失败回退本地模板 */
+    fun generateWorldDraft(name: String, tagline: String, source: String) {
+        viewModelScope.launch {
+            _draftProgress.value = 0.08f
+            val cfg = _llmConfig.value
+            val useLlm = cfg.apiKey.isNotEmpty() && !cfg.baseUrl.contains("example.com")
+            val fallback = WorldDraft(
+                name = name.ifBlank { "自定义世界" },
+                tagline = tagline.ifBlank { "自定义世界观" },
+                tiers = listOf("初阶", "入门", "精通", "大成", "化境", "登峰"),
+                places = listOf("起点 · " + name.take(4), "聚落", "险地", "秘境"),
+                rules = tagline,
+            )
+            if (!useLlm) {
+                delay(600)
+                _draftProgress.value = 1f
+                _draft.value = fallback
+                pushFeedback("已用本地模板生成草稿（未配置 LLM）")
+                return@launch
+            }
+            val prompt = buildString {
+                appendLine("你是开放世界文字游戏世界包架构师。根据设定输出 JSON，不要其它文字。")
+                appendLine("字段：name, tagline, tiers(6个等级名字符串数组), places(4个地点名字符串数组), rules(一句话铁律)。")
+                appendLine("来源：$source")
+                appendLine("世界名：$name")
+                appendLine("设定：$tagline")
+                append("语言与设定一致。")
+            }
+            try {
+                _draftProgress.value = 0.35f
+                val raw = llm.complete(cfg, "只输出 JSON", prompt).getOrThrow()
+                _draftProgress.value = 0.8f
+                val json = kotlinx.serialization.json.Json { ignoreUnknownKeys = true }
+                val cleaned = raw.substringAfter('{').substringBeforeLast('}').let { "{$it}" }
+                val el = runCatching {
+                    json.parseToJsonElement(cleaned) as? kotlinx.serialization.json.JsonObject
+                }.getOrNull()
+                if (el != null) {
+                    fun arr(key: String, def: List<String>): List<String> {
+                        val a = el[key] as? JsonArray ?: return def
+                        val list = a.mapNotNull { runCatching { it.jsonPrimitive.contentOrNull }.getOrNull() }
+                            .filter { !it.isNullOrBlank() }
+                        return list.ifEmpty { def }
+                    }
+                    _draft.value = WorldDraft(
+                        name = el["name"]?.let { it.jsonPrimitive.contentOrNull } ?: fallback.name,
+                        tagline = el["tagline"]?.let { it.jsonPrimitive.contentOrNull } ?: fallback.tagline,
+                        tiers = arr("tiers", fallback.tiers),
+                        places = arr("places", fallback.places),
+                        rules = el["rules"]?.let { it.jsonPrimitive.contentOrNull } ?: fallback.rules,
+                    )
+                    _draftProgress.value = 1f
+                    pushFeedback("LLM 草稿已生成")
+                    return@launch
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Throwable) {
+                pushFeedback("LLM 生成失败，已用本地模板")
+            }
+            _draftProgress.value = 1f
+            _draft.value = fallback
+        }
+    }
+
+    fun clearDraft() { _draft.value = null; _draftProgress.value = 0f }
+
     fun saveCustomPack(id: String, name: String, tagline: String, tiers: List<String>, placeNames: List<String>) {
         val safeTiers = tiers.filter { it.isNotBlank() }.ifEmpty { listOf("初期", "中期", "后期") }
         val safePlaces = placeNames.filter { it.isNotBlank() }.ifEmpty { listOf("起点") }
@@ -469,7 +554,7 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
                         buf.append(piece)
                         _event.update { it?.copy(shownText = buf.toString(), loading = false) }
                     }
-            } catch (e: kotlinx.coroutines.CancellationException) {
+            } catch (e: CancellationException) {
                 // 协程取消（如 endEvent）不是 LLM 失败，必须上抛
                 throw e
             } catch (e: Throwable) {
