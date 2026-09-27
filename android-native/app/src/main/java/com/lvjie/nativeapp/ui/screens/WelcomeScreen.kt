@@ -30,11 +30,16 @@ fun WelcomeScreen(
     selectedId: String,
     onSelectWorld: (String) -> Unit,
     onStart: () -> Unit,
+    onContinue: () -> Unit,
     onDetail: () -> Unit,
     onAuthor: () -> Unit,
     onApi: () -> Unit,
     onHelp: () -> Unit,
     customPacks: List<com.lvjie.nativeapp.data.CustomPack> = emptyList(),
+    saveName: String = "",
+    saveLevel: String = "",
+    savePlace: String = "",
+    hasSave: Boolean = false,
 ) {
     val c = LocalLvjieColors.current
     val pack = WorldPacks.byId(selectedId)
@@ -82,7 +87,7 @@ fun WelcomeScreen(
             }
         }
 
-        item { SectionLabel("世界收藏 · 点击切换主题（6）") }
+        item { SectionLabel("世界收藏 · 点击切换主题（${WorldPacks.all.size}）") }
 
         items(rows.size) { index ->
             val pair = rows[index]
@@ -112,27 +117,28 @@ fun WelcomeScreen(
             item { SectionLabel("自定义世界 · ${customPacks.size}") }
             items(customPacks.size) { i ->
                 val cp = customPacks[i]
-                LvjieCard {
+                LvjieCard(onClick = { onSelectWorld(cp.id) }) {
                     ListItem(
                         icon = "🛠",
                         title = cp.name,
                         subtitle = "${cp.tagline.take(18)} · ${cp.tiers.size} 阶 · ${cp.placeNames.size} 地点",
-                        trail = { LvjieChip("已保存", selected = true) },
+                        trail = { LvjieChip(if (selectedId == cp.id) "已选" else "选用", selected = selectedId == cp.id) },
+                        onClick = { onSelectWorld(cp.id) },
                     )
                 }
             }
         }
 
         item {
-            LvjieCard(onClick = onStart) {
+            LvjieCard(onClick = { if (hasSave) onContinue() else onStart() }) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     ListItem(
                         icon = "💾",
-                        title = "继续上次",
-                        subtitle = "林逸 · ${pack.tiers.getOrElse(1) { "" }} · ${pack.places.firstOrNull()?.name ?: ""}",
+                        title = if (hasSave) "继续上次" else "暂无存档",
+                        subtitle = if (hasSave) "$saveName · $saveLevel · $savePlace" else "点「开始旅程」创建角色",
                         modifier = Modifier.weight(1f).background(c.surface),
-                        trail = { LvjieChip("进入", selected = true) },
-                        onClick = onStart,
+                        trail = { LvjieChip(if (hasSave) "继续" else "新档", selected = true) },
+                        onClick = { if (hasSave) onContinue() else onStart() },
                     )
                 }
             }
@@ -185,7 +191,7 @@ private fun WorldCard(
         Text(w.tagline, color = c.ink3, fontSize = 11.sp, maxLines = 1)
         Spacer(Modifier.height(8.dp))
         Text(
-            "${w.level} · ${w.progress} · 6 阶",
+            "${w.level} · ${w.progress} · ${w.tiers.size} 阶",
             color = c.ink3,
             fontSize = 10.5.sp,
             fontWeight = FontWeight.SemiBold,
