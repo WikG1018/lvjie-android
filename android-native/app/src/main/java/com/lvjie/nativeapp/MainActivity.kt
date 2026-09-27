@@ -7,6 +7,10 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -84,12 +88,16 @@ fun AppRoot(
     val c = LocalLvjieColors.current
     var showDelete by remember { mutableStateOf(false) }
 
+    Box(Modifier.fillMaxSize()) {
     Scaffold(
         containerColor = c.canvas,
+        contentWindowInsets = WindowInsets.safeDrawing,
         topBar = {
-            TopBar(screen = screen, pack = pack, state = state, onBack = {
-                onScreen(if (screen == AppScreen.Game) AppScreen.Welcome else AppScreen.Welcome)
-            })
+            TopBar(
+                screen = screen, pack = pack, state = state,
+                onBack = { onScreen(AppScreen.Welcome) },
+                modifier = Modifier.windowInsetsPadding(WindowInsets.statusBars),
+            )
         },
         bottomBar = {
             if (screen == AppScreen.Game) {
@@ -158,7 +166,7 @@ fun AppRoot(
         }
     }
 
-    // Toast
+    // Toast（悬浮在整窗之上）
     if (feedback != null) {
         LaunchedEffect(feedback.message) {
             delay(2200)
@@ -187,7 +195,12 @@ fun AppRoot(
             Modifier.fillMaxSize().background(c.world.soft),
             contentAlignment = Alignment.Center,
         ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(24.dp)) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier
+                    .padding(24.dp)
+                    .windowInsetsPadding(WindowInsets.safeDrawing),
+            ) {
                 Text(pack.icon, fontSize = 56.sp)
                 Text(pack.advance + "成功", fontSize = 34.sp, fontWeight = FontWeight.Bold, letterSpacing = (-0.03f).sp)
                 Spacer(Modifier.height(12.dp))
@@ -222,6 +235,7 @@ fun AppRoot(
             },
         )
     }
+    } // end outer Box
 }
 
 @Composable
@@ -230,6 +244,7 @@ private fun TopBar(
     pack: com.lvjie.nativeapp.data.WorldPack,
     state: com.lvjie.nativeapp.data.PlayerState,
     onBack: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val c = LocalLvjieColors.current
     val title = when (screen) {
@@ -246,7 +261,7 @@ private fun TopBar(
         else -> null
     }
     Row(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp),
+        modifier = modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (screen != AppScreen.Welcome) {
