@@ -315,6 +315,30 @@ fun ProfileScreen(state: PlayerState, pack: WorldPack, onBreakthrough: () -> Uni
         item {
             LvjieCard {
                 Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("同伴", fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                    Spacer(Modifier.width(8.dp))
+                    Box(Modifier.size(7.dp).clip(CircleShape).background(c.world.accent))
+                    Spacer(Modifier.weight(1f))
+                    Text("${state.friends.size} 人", color = c.ink3, fontSize = 11.sp)
+                }
+                Spacer(Modifier.height(10.dp))
+                if (state.friends.isEmpty()) {
+                    EmptyState("🤝", "暂无同伴", "在场景中与人交谈可结识同伴")
+                } else {
+                    state.friends.forEach { f ->
+                        ListItem(
+                            icon = "👤",
+                            title = "${f.name} · ${f.rel}",
+                            subtitle = "${f.at} · 好感 ${f.favor} · ${f.intro}",
+                            modifier = Modifier.padding(vertical = 4.dp),
+                        )
+                    }
+                }
+            }
+        }
+        item {
+            LvjieCard {
+                Row(verticalAlignment = Alignment.CenterVertically) {
                     Text("重大经历", fontSize = 15.sp, fontWeight = FontWeight.Bold)
                     Spacer(Modifier.width(8.dp))
                     Box(Modifier.size(7.dp).clip(CircleShape).background(c.world.accent))
