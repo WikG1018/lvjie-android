@@ -219,6 +219,24 @@ fun AuthorScreen(onSaved: (name: String, tagline: String, tiers: List<String>, p
                 }
             }
             3 -> item {
+                var progress by remember { mutableStateOf(0.15f) }
+                var phase by remember { mutableStateOf("考据设定…") }
+                LaunchedEffect(Unit) {
+                    val phases = listOf(
+                        0.3f to "合并世界观…",
+                        0.55f to "生成等级与地点…",
+                        0.78f to "编纂人物档案…",
+                        0.95f to "校对草稿…",
+                        1f to "完成",
+                    )
+                    phases.forEach { (p, ph) ->
+                        kotlinx.coroutines.delay(420)
+                        progress = p
+                        phase = ph
+                    }
+                    kotlinx.coroutines.delay(280)
+                    step = 4
+                }
                 LvjieCard {
                     Column(
                         modifier = Modifier.fillMaxWidth().padding(16.dp),
@@ -226,11 +244,13 @@ fun AuthorScreen(onSaved: (name: String, tagline: String, tiers: List<String>, p
                     ) {
                         Dots()
                         Spacer(Modifier.height(12.dp))
-                        Text("正在考据设定、合并世界观、生成草稿…", color = c.ink2, fontSize = 13.sp)
+                        Text(phase, color = c.ink2, fontSize = 13.sp)
                         Spacer(Modifier.height(12.dp))
-                        ProgressBar(0.62f)
+                        ProgressBar(progress)
+                        Spacer(Modifier.height(8.dp))
+                        Text("基于「$waName」生成可玩草稿", color = c.ink3, fontSize = 11.sp)
                         Spacer(Modifier.height(16.dp))
-                        LvjieButton("跳过（演示）", onClick = { step = 4 }, style = BtnStyle.Outline, small = true)
+                        LvjieButton("跳过等待", onClick = { step = 4 }, style = BtnStyle.Outline, small = true)
                     }
                 }
             }
