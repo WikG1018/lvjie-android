@@ -18,13 +18,26 @@ android {
         versionName = "1.0.0"
     }
 
+    signingConfigs {
+        create("release") {
+            storeFile = file("/Volumes/LANPO/mimo work/xiaoshuo/android-native/release.keystore")
+            storePassword = "lvjie123"
+            keyAlias = "lvjie"
+            keyPassword = "lvjie123"
+        }
+    }
     buildTypes {
         release {
-            isMinifyEnabled = true
+            isMinifyEnabled = false
+            isShrinkResources = false
+            signingConfig = signingConfigs.getByName("release")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+        }
+        debug {
+            signingConfig = signingConfigs.getByName("release")
         }
     }
     compileOptions {
