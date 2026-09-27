@@ -105,6 +105,7 @@ private fun androidx.compose.foundation.layout.RowScope.SegBtn(text: String, on:
 /** P12 设置 */
 @Composable
 fun SettingsScreen(
+    strings: com.lvjie.nativeapp.i18n.UiStrings = com.lvjie.nativeapp.i18n.I18n.of("简体中文"),
     state: PlayerState,
     pack: WorldPack,
     onAiStyle: (String) -> Unit,
@@ -128,7 +129,7 @@ fun SettingsScreen(
         item {
             LvjieCard {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("AI 叙事", fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                    Text(strings.aiStyle, fontSize = 15.sp, fontWeight = FontWeight.Bold)
                     Spacer(Modifier.width(8.dp))
                     Box(Modifier.size(7.dp).clip(CircleShape).background(c.world.accent))
                 }
@@ -143,7 +144,7 @@ fun SettingsScreen(
         item {
             LvjieCard {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("剧情语言", fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                    Text(strings.language, fontSize = 15.sp, fontWeight = FontWeight.Bold)
                     Spacer(Modifier.width(8.dp))
                     Box(Modifier.size(7.dp).clip(CircleShape).background(c.world.accent))
                 }
@@ -159,14 +160,14 @@ fun SettingsScreen(
         }
         item {
             LvjieCard {
-                SettingRow("对话轮数限制", "开启后单次事件约 10 轮收束") {
+                SettingRow(strings.dialogLimit, "开启后单次事件约 10 轮收束") {
                     LvjieSwitch(state.dialogLimit, onToggleLimit)
                 }
             }
         }
         item {
             LvjieCard {
-                SettingRow("背景音乐", "内置环境音乐，可随时开关") {
+                SettingRow(strings.bgm, "内置环境音乐，可随时开关") {
                     LvjieSwitch(state.bgm, onToggleBgm)
                 }
             }
@@ -187,9 +188,9 @@ fun SettingsScreen(
                 }
                 Spacer(Modifier.height(12.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    LvjieButton("导出分享", onClick = onExport, style = BtnStyle.Outline, small = true)
-                    LvjieButton("导入存档", onClick = { showImport = true }, style = BtnStyle.Outline, small = true)
-                    LvjieButton("删除本世界", onClick = onDelete, style = BtnStyle.Danger, small = true)
+                    LvjieButton(strings.export, onClick = onExport, style = BtnStyle.Outline, small = true)
+                    LvjieButton(strings.importSave, onClick = { showImport = true }, style = BtnStyle.Outline, small = true)
+                    LvjieButton(strings.deleteWorld, onClick = onDelete, style = BtnStyle.Danger, small = true)
                 }
                 Spacer(Modifier.height(8.dp))
                 Text("导出为 JSON（不含 API Key），可分享或备份。删除只影响《${pack.name}》存档。", color = c.ink3, fontSize = 11.sp)
