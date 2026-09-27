@@ -1,0 +1,8 @@
+# Android / 移动构建产物
+android/app/build/
+android/build/
+android/.gradle/
+android/local.properties
+android/.idea/
+*.apk
+*.aab

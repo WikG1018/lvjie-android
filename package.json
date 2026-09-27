@@ -1,0 +1,27 @@
+{
+  "name": "agent-worlds",
+  "productName": "旅界",
+  "version": "0.0.3",
+  "description": "AI驱动的多世界观开放世界游戏",
+  "main": "main.js",
+  "author": "Yucheng",
+  "license": "MIT",
+  "scripts": {
+    "start": "node scripts/sync-runtime.js && node scripts/run-electron.js",
+    "sync": "node scripts/sync-runtime.js",
+    "rebuild:runtime": "node scripts/rebuild-runtime.js",
+    "smoke:engine": "node scripts/smoke.mjs",
+    "smoke:book": "node scripts/smoke-book.mjs",
+    "smoke:chars": "node scripts/smoke-chars.mjs",
+    "smoke:npc": "node scripts/smoke-npc.mjs",
+    "smoke:quest": "node scripts/smoke-quest.mjs",
+    "smoke:llm": "node scripts/llm-endpoints.mjs",
+    "smoke:stage": "node scripts/stage-smoke.js"
+  },
+  "devDependencies": {
+    "electron": "33.4.11"
+  },
+  "allowScripts": {
+    "electron@33.4.11": true
+  }
+}

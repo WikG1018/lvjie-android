@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; media-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
+<title>旅界</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div id="aw-errbox" style="display:none;position:fixed;left:8px;right:8px;top:8px;z-index:9999;background:#400;color:#fff;padding:10px;font:12px/1.4 monospace;border-radius:8px"></div>
+
+<header id="hdr" hidden>
+  <span class="logo" id="hdr-logo">🗺️ 旅界</span>
+  <span class="who" id="hdr-who"></span>
+  <span class="hbadge"><span id="hdr-money-label">货币</span> <b id="hdr-money">0</b></span>
+  <span class="spacer"></span>
+  <button class="btn btn-sm" id="btn-key" type="button">🔑 API</button>
+  <button class="btn btn-sm" id="btn-help" type="button">📖 帮助</button>
+  <button class="btn btn-sm" id="btn-worlds" type="button">🌐 世界观</button>
+</header>
+
+<div id="app" hidden>
+  <button id="backbtn" type="button" title="返回">←</button>
+  <aside id="side">
+    <div class="panel" id="pcard"></div>
+    <div class="panel" id="nav" style="padding:8px">
+      <button class="navbtn" id="nav-scene" data-tab="scene" type="button">📍 当前场景</button>
+      <button class="navbtn" id="nav-map" data-tab="map" type="button">🗺️ 地图</button>
+      <button class="navbtn" id="nav-profile" data-tab="profile" type="button">👤 人物信息</button>
+      <button class="navbtn" id="nav-friends" data-tab="friends" type="button">🤝 同伴</button>
+      <button class="navbtn" id="nav-quests" data-tab="quests" type="button">📜 任务</button>
+      <button class="navbtn" id="nav-bag" data-tab="bag" type="button">🎒 行囊</button>
+      <button class="navbtn" id="nav-settings" data-tab="settings" type="button">⚙️ 设置</button>
+    </div>
+  </aside>
+  <main id="main"></main>
+</div>
+
+<div id="modals"></div>
+<div id="toasts"></div>
+
+<div id="welcome"></div>
+
+<script src="js/boot-errors.js"></script>
+<script type="module" src="js/main.js"></script>
+
+</body>
+</html>

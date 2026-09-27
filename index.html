@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#120a2a">
+<title>旅界 · 移动版</title>
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;background:#0c0818;color:#e8e0ff;font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif}
+#app{height:100%;display:flex;flex-direction:column;max-width:520px;margin:0 auto;position:relative;overflow:hidden;background:linear-gradient(180deg,#140a2c,#0c0818 40%)}
+header{padding:12px 14px;padding-top:max(12px,env(safe-area-inset-top));display:flex;align-items:center;gap:10px;flex:0 0 auto}
+header h1{font-size:16px;margin:0;letter-spacing:2px;font-weight:600}
+.tag{margin-left:auto;font-size:11px;opacity:.75;background:#241848;padding:4px 8px;border-radius:999px}
+main{flex:1;overflow-y:auto;padding:8px 14px 90px;scroll-behavior:smooth}
+.card{background:rgba(32,22,62,.85);border:1px solid rgba(150,120,255,.18);border-radius:16px;padding:14px;margin:10px 0}
+.card h3{margin:0 0 8px;font-size:15px}
+.muted{color:#9a8ab8;font-size:12px;line-height:1.5}
+.chip{display:inline-block;font-size:11px;padding:3px 8px;border-radius:999px;background:#2a1c52;margin:2px 4px 2px 0;color:#cbb8ff}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:0;border-radius:12px;padding:12px 14px;font-size:14px;font-weight:600;cursor:pointer;min-height:44px}
+.btn-primary{background:linear-gradient(135deg,#7b6cff,#b46cff);color:#fff;width:100%}
+.btn-ghost{background:#2a1c52;color:#e8e0ff}
+.btn-sm{padding:8px 12px;min-height:38px;font-size:13px;border-radius:10px;width:auto}
+.btn-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+input,textarea,select{width:100%;background:#160e2c;border:1px solid #3a2a6a;color:#eee;border-radius:12px;padding:12px;font-size:15px;margin:6px 0}
+label{font-size:12px;color:#a898c8;margin-top:8px;display:block}
+.story{font-size:16px;line-height:1.75;white-space:pre-wrap}
+.opt{width:100%;text-align:left;background:#241848;border:1px solid #3d2d78;color:#efe8ff;border-radius:12px;padding:12px 14px;margin:8px 0;font-size:14px;cursor:pointer;min-height:48px}
+.opt:active{background:#3a2878}
+nav{position:absolute;left:0;right:0;bottom:0;display:flex;background:rgba(18,10,36,.96);border-top:1px solid #2c1d5c;padding:6px 4px;padding-bottom:max(6px,env(safe-area-inset-bottom));z-index:20}
+nav button{flex:1;background:transparent;border:0;color:#8f7ab8;font-size:11px;padding:8px 2px;cursor:pointer}
+nav button.on{color:#c9a8ff}
+nav button .ic{display:block;font-size:18px;line-height:1.2}
+.hidden{display:none!important}
+.progress{height:8px;background:#2a1c52;border-radius:99px;overflow:hidden;margin:8px 0}
+.progress i{display:block;height:100%;background:linear-gradient(90deg,#7b6cff,#ff7ad9)}
+.world-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.world{background:rgba(36,24,72,.9);border:2px solid transparent;border-radius:16px;padding:12px;cursor:pointer;min-height:110px}
+.world.on{border-color:#b46cff;box-shadow:0 0 20px rgba(180,108,255,.35)}
+.world .emoji{font-size:28px}
+.world .name{font-size:15px;font-weight:700;margin:4px 0}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:96px;background:#2b1c58;border:1px solid #5a3aaa;color:#fff;padding:10px 16px;border-radius:12px;z-index:50;font-size:13px;max-width:90%;text-align:center}
+.row{display:flex;justify-content:space-between;gap:8px;font-size:13px;padding:4px 0}
+.row .v{font-weight:700;text-align:right}
+.spin{width:16px;height:16px;border:2px solid #fff;border-top-color:transparent;border-radius:50%;animation:sp 1s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+.logo{width:36px;height:36px;border-radius:12px;background:radial-gradient(circle at 30% 30%,#8f7cff,#2a1858 60%,#12082c);display:flex;align-items:center;justify-content:center;font-size:18px}
+</style>
+</head>
+<body>
+
+<div id="app">
+  <header>
+    <div class="logo">🌀</div>
+    <h1>旅界</h1>
+    <div class="tag" id="hdrTag">移动版</div>
+  </header>
+  <main id="main"></main>
+  <nav id="nav">
+    <button data-tab="home" class="on"><span class="ic">🏠</span>世界</button>
+    <button data-tab="scene"><span class="ic">🗺️</span>剧情</button>
+    <button data-tab="bag"><span class="ic">🎒</span>行囊</button>
+    <button data-tab="me"><span class="ic">👤</span>角色</button>
+    <button data-tab="set"><span class="ic">⚙️</span>设置</button>
+  </nav>
+</div>
+<script>
+(function(){
+'use strict'
+const $ = s => document.querySelector(s)
+const main = $('#main')
+const app = {
+  tab: 'home',
+  selWorld: 'xiuxian',
+  S: null,
+  loading: false,
+  config: { baseUrl:'', key:'', model:'', apiStyle:'chat' }
+}
+
+const WORLDS = [
+  { id:'xiuxian', icon:'⛰️', name:'修仙', tag:'凡人到道祖', level:'境界', progress:'修为', money:'灵石', color:'#e8c46a', verb:'突破',
+    start:'踏入修仙之路，成为天南大陆一名少年。',
+    actions:[['游历','我外出游历，增长见闻。'],['交谈','我找人打听消息。'],['历练','我挑战附近强敌。'],['探索','我探索此地寻找机缘。'],['修炼','我打坐修炼。']] },
+  { id:'xuanhuan', icon:'🌌', name:'玄幻', tag:'苍澜破境', level:'境界', progress:'灵力', money:'金币', color:'#7b6cff', verb:'破境',
+    start:'你觉醒灵根，踏上苍澜修行路。',
+    actions:[['闯荡','我外出闯荡。'],['攀谈','我与人攀谈。'],['挑战','我挑战强者。'],['搜寻','我搜寻灵物。'],['吐纳','我吐纳炼气。']] },
+  { id:'wuxia', icon:'⚔️', name:'武侠', tag:'江湖风雨', level:'武功', progress:'内力', money:'银两', color:'#c9aa6a', verb:'精进',
+    start:'你背剑踏入风雨江湖。',
+    actions:[['闯荡','我闯荡江湖。'],['交谈','我打探江湖消息。'],['切磋','我邀人切磋。'],['寻访','我寻访秘籍。'],['运功','我运功调息。']] },
+  { id:'urban', icon:'💼', name:'职场', tag:'商战晋升', level:'段位', progress:'声望', money:'现金', color:'#5ec8ff', verb:'晋升',
+    start:'你入职小公司，月薪三千。',
+    actions:[['走动','我全城走动找机会。'],['社交','我约人应酬。'],['谈判','我去谈生意。'],['找机会','我找工作与项目。'],['休息','我回家休息。']] },
+  { id:'apocalypse', icon:'☢️', name:'末世', tag:'灾变求生', level:'等阶', progress:'进化点', money:'物资点', color:'#8fdf9a', verb:'进化',
+    start:'红雾降临，你从废墟爬出。',
+    actions:[['搜集','我外出搜集物资。'],['联络','我联络附近幸存者。'],['狩猎','我狩猎异变体。'],['搜刮','我搜刮废墟。'],['守夜','我找掩体休整。']] },
+  { id:'western', icon:'🏰', name:'西幻', tag:'骑士魔法', level:'位阶', progress:'魔力', money:'银币', color:'#e89ab8', verb:'晋阶',
+    start:'你在边境村庄测出微弱魔力。',
+    actions:[['冒险','我踏上旅途。'],['交谈','我打探情报。'],['讨伐','我讨伐魔物。'],['探索','我探索遗迹。'],['冥想','我冥想回魔。']] }
+]
+
+function W(){ return WORLDS.find(w=>w.id===app.selWorld) || WORLDS[0] }
+
+/* ---------- storage ---------- */
+function cfgGet(){
+  try { return JSON.parse(localStorage.getItem('lvjie_cfg')||'{}') } catch(e){ return {} }
+}
+function cfgSet(c){
+  app.config = Object.assign({}, app.config, c)
+  try { localStorage.setItem('lvjie_cfg', JSON.stringify(app.config)) } catch(e){}
+}
+function saveGame(){
+  if(!app.S) return
+  try { localStorage.setItem('lvjie_slot_'+app.S.world, JSON.stringify(app.S)) } catch(e){}
+}
+function loadGame(world){
+  try { const s=JSON.parse(localStorage.getItem('lvjie_slot_'+world)||'null'); return s && s.map? s:null } catch(e){ return null }
+}
+function newGame(world){
+  const w = WORLDS.find(x=>x.id===world) || WORLDS[0]
+  return {
+    world, name:'旅人', age:16, tier:0, sub:0, prog:0, money:100,
+    inv:[{name:'干粮', type:'consumable', count:2, desc:'能顶一阵'}],
+    quests:[], friends:[], events:[w.start], log:[],
+    place:'起点', created:Date.now()
+  }
+}
+
+/* ---------- UI helpers ---------- */
+function toast(msg){
+  const t=document.createElement('div'); t.className='toast'; t.textContent=msg
+  document.body.appendChild(t); setTimeout(()=>t.remove(),2200)
+}
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])) }
+
+function render(){
+  document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on', b.dataset.tab===app.tab))
+  const w=W()
+  $('#hdrTag').textContent = app.S ? (w.name+' · '+w.level) : '移动版'
+  if(app.tab==='home') return renderHome()
+  if(app.tab==='scene') return renderScene()
+  if(app.tab==='bag') return renderBag()
+  if(app.tab==='me') return renderMe()
+  if(app.tab==='set') return renderSet()
+}
+
+function renderHome(){
+  const slotN = id => !!loadGame(id)
+  main.innerHTML = `
+    <div class="card">
+      <h3>选择世界</h3>
+      <p class="muted">每个世界独立存档，离线可玩；接上 API 后可让 AI 推演剧情。</p>
+      <div class="world-grid" style="margin-top:10px">
+        ${WORLDS.map(x=>`
+          <div class="world ${x.id===app.selWorld?'on':''}" data-w="${x.id}">
+            <div class="emoji">${x.icon}</div>
+            <div class="name" style="color:${x.color}">${x.name}</div>
+            <div class="muted">${x.tag}</div>
+            <div class="chip">${x.level} · ${x.progress}</div>
+            <div class="muted" style="margin-top:6px">${slotN(x.id)?'💾 有存档':'新开'}</div>
+          </div>`).join('')}
+      </div>
+    </div>
+    <div class="card">
+      <h3>${w.icon} ${w.name}</h3>
+      <p class="muted">${esc(w.start)}</p>
+      <div class="btn-row">
+        <button class="btn btn-primary" id="btnGo">${slotN(w.id)?'继续冒险':'开始旅程'}</button>
+        ${slotN(w.id)?'<button class="btn btn-ghost btn-sm" id="btnNew">新开一局</button>':''}
+      </div>
+    </div>
+    <div class="card">
+      <h3>玩法</h3>
+      <div class="row"><span>探索与对话</span><span class="v">剧情页选择</span></div>
+      <div class="row"><span>剧情生成</span><span class="v">本地叙事 / AI</span></div>
+      <div class="row"><span>存档</span><span class="v">本机 localStorage</span></div>
+    </div>`
+  main.querySelectorAll('[data-w]').forEach(el=>{
+    el.onclick=()=>{ app.selWorld=el.dataset.w; render() }
+  })
+  $('#btnGo').onclick=()=>{
+    const s = loadGame(w.id) || newGame(w.id)
+    app.S = s; app.S.world=w.id; app.tab='scene'; saveGame(); render()
+  }
+  const bn=$('#btnNew'); if(bn) bn.onclick=()=>{
+    if(!confirm('覆盖当前世界的存档？')) return
+    app.S=newGame(w.id); app.tab='scene'; saveGame(); render()
+  }
+}
+
+function renderScene(){
+  if(!app.S){ app.tab='home'; return render() }
+  const w=W(); const S=app.S
+  const story = S.events.slice(-3).join('\n\n')
+  main.innerHTML = `
+    <div class="card">
+      <h3>${esc(S.place)}</h3>
+      <div class="chip">${w.icon} ${w.name}</div>
+      <div class="chip">${w.level} ${['初','中','高'][Math.min(2,S.tier)]}</div>
+      <div class="chip">${w.progress} ${S.prog}</div>
+      <div class="progress"><i style="width:${Math.min(100, S.prog%100)}%"></i></div>
+      <div class="story" id="story">${esc(story)}</div>
+    </div>
+    <div class="card">
+      <h3>行动</h3>
+      <div class="btn-row">
+        ${w.actions.map((a,i)=>`<button class="btn btn-ghost btn-sm" data-act="${i}">${a[0]}</button>`).join('')}
+      </div>
+      <label>自由输入</label>
+      <textarea id="free" rows="2" placeholder="例如：我想打听村里的传闻…"></textarea>
+      <button class="btn btn-primary" id="btnDo" style="margin-top:8px">出发</button>
+    </div>
+    ${S.log.length?`<div class="card"><h3>最近</h3>${S.log.slice(-6).map(l=>`<div class="muted">· ${esc(l)}</div>`).join('')}</div>`:''}
+  `
+  let prompt=null
+  main.querySelectorAll('[data-act]').forEach(b=>{
+    b.onclick=()=>{ prompt=w.actions[Number(b.dataset.act)][1]; $('#free').value=prompt }
+  })
+  $('#btnDo').onclick=async ()=>{
+    const text=(prompt||$('#free').value||'继续').trim()
+    if(app.loading) return
+    app.loading=true
+    $('#btnDo').innerHTML='<span class="spin"></span> 推演中…'
+    try {
+      const out = await generateTurn(text)
+      S.events.push(out.story)
+      applyLite(out)
+      saveGame(); render()
+    } catch(e){
+      toast(e.message||'生成失败')
+      $('#btnDo').textContent='出发'
+    }
+    app.loading=false
+    prompt=null
+  }
+}
+
+function applyLite(out){
+  const S=app.S
+  if(out.moneyAdd) S.money=Math.max(0,S.money+out.moneyAdd)
+  if(out.progAdd) S.prog=Math.max(0,S.prog+out.progAdd)
+  if(out.item) S.inv.push(out.item)
+  if(out.place) S.place=out.place
+  if(out.quest) S.quests.push(out.quest)
+  if(out.log) S.log.push(out.log)
+}
+
+function renderBag(){
+  const S=app.S
+  if(!S){ main.innerHTML='<div class="card muted">先在「世界」开始旅程</div>'; return }
+  main.innerHTML = `
+    <div class="card">
+      <h3>行囊</h3>
+      ${S.inv.map((it,i)=>`
+        <div class="row">
+          <span>${esc(it.name)} <span class="muted">×${it.count||1}</span></span>
+          <span class="v">${esc(it.type||'')}</span>
+        </div>`).join('')||'<div class="muted">空空如也</div>'}
+    </div>
+    <div class="card">
+      <h3>任务</h3>
+      ${S.quests.map(q=>`<div class="muted">· ${esc(q.title)}（${esc(q.status||'进行中')}）</div>`).join('')||'<div class="muted">暂无委托</div>'}
+    </div>`
+}
+
+function renderMe(){
+  const S=app.S; const w=W()
+  if(!S){ main.innerHTML='<div class="card muted">尚未开局</div>'; return }
+  main.innerHTML = `
+    <div class="card">
+      <h3>${esc(S.name)}</h3>
+      <div class="row"><span>世界</span><span class="v">${w.name}</span></div>
+      <div class="row"><span>年龄</span><span class="v">${S.age} 岁</span></div>
+      <div class="row"><span>${w.level}</span><span class="v">${['初期','中期','后期'][Math.min(2,S.sub)]}</span></div>
+      <div class="row"><span>${w.progress}</span><span class="v">${S.prog}</span></div>
+      <div class="row"><span>${w.money}</span><span class="v">${S.money}</span></div>
+      <div class="row"><span>地点</span><span class="v">${esc(S.place)}</span></div>
+    </div>
+    <div class="card">
+      <h3>同伴</h3>
+      ${S.friends.map(f=>`<div class="muted">· ${esc(f.name)} ${esc(f.intro||'')}</div>`).join('')||'<div class="muted">暂无</div>'}
+    </div>`
+}
+
+function renderSet(){
+  const c=cfgGet()
+  main.innerHTML = `
+    <div class="card">
+      <h3>AI 接口（可选）</h3>
+      <p class="muted">OpenAI 兼容 chat/completions。不配也能玩本地剧情。</p>
+      <label>Base URL</label>
+      <input id="cBase" value="${esc(c.baseUrl||'')}" placeholder="https://api.openai.com/v1">
+      <label>API Key</label>
+      <input id="cKey" type="password" value="${esc(c.key||'')}" placeholder="sk-…">
+      <label>模型</label>
+      <input id="cModel" value="${esc(c.model||'')}" placeholder="gpt-4o-mini">
+      <div class="btn-row">
+        <button class="btn btn-primary" id="cSave">保存配置</button>
+      </div>
+      <div class="muted" style="margin-top:8px">Key 仅存本机，不会上传到我们的服务器。</div>
+    </div>
+    <div class="card">
+      <h3>存档</h3>
+      <div class="btn-row">
+        <button class="btn btn-ghost btn-sm" id="exp">导出 JSON</button>
+        <button class="btn btn-ghost btn-sm" id="clr">清空本世界</button>
+      </div>
+    </div>`
+  $('#cSave').onclick=()=>{
+    cfgSet({ baseUrl:$('#cBase').value.trim(), key:$('#cKey').value.trim(), model:$('#cModel').value.trim() })
+    toast('配置已保存')
+  }
+  $('#exp').onclick=()=>{
+    if(!app.S) return toast('无存档')
+    const blob=new Blob([JSON.stringify(app.S,null,2)],{type:'application/json'})
+    const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='lvjie-save.json'; a.click()
+  }
+  $('#clr').onclick=()=>{
+    if(!confirm('清空当前世界存档？')) return
+    localStorage.removeItem('lvjie_slot_'+app.selWorld)
+    app.S=null; render(); toast('已清空')
+  }
+}
+
+/* ---------- AI / local narrative ---------- */
+function localTurn(text){
+  const w=W(); const S=app.S
+  const hits=[]
+  if(/交谈|打听|攀谈|联系/.test(text)) hits.push('有人应声搭话，带来一段见闻。')
+  if(/挑战|战斗|狩猎|讨伐|切磋|历练/.test(text)) hits.push('一番缠斗后，胜负已分。')
+  if(/探索|搜寻|搜刮|游历|冒险|走动/.test(text)) hits.push('你发现了一条新线索。')
+  if(/修炼|打坐|吐纳|冥想|运功|休息/.test(text)) hits.push('气息渐稳，状态见好。')
+  if(!hits.length) hits.push('风声掠过，行程继续。')
+  const story=`${text}。\n${hits[0]}${w.name}世界的风物在眼前展开。`
+  return {
+    story,
+    moneyAdd: Math.floor(Math.random()*8),
+    progAdd: 1+Math.floor(Math.random()*3),
+    log: hits[0],
+    place: Math.random()>0.75 ? '新发现的地点' : S.place
+  }
+}
+
+async function generateTurn(text){
+  const c=cfgGet()
+  if(!c.baseUrl || !c.key || !c.model) return localTurn(text)
+  const w=W(); const S=app.S
+  const sys=`你是开放世界游戏《旅界》的叙事引擎，当前世界：${w.name}。
+只输出：一段${120}字内中文剧情（第一行就是剧情）+ 换行后 1~3 条选项「1.xx」。
+若给物品/金钱，在最后一行用 JSON：{"money":0,"prog":0,"item":{"name":"","type":"special"},"quest":{"title":"","status":"active"},"place":""}
+禁止思考、规划、英文旁白。`
+  const user=`玩家状态：${w.level}${S.tier+1}，${w.progress}${S.prog}，${w.money}${w.money}\n地点：${S.place}\n行动：${text}`
+  const url=c.baseUrl.replace(/\/+$/,'')+'/chat/completions'
+  const res=await fetch(url,{
+    method:'POST',
+    headers:{'Content-Type':'application/json','Authorization':'Bearer '+c.key},
+    body:JSON.stringify({model:c.model, temperature:0.85, messages:[{role:'system',content:sys},{role:'user',content:user}]})
+  })
+  const raw=await res.text()
+  if(!res.ok) throw new Error('HTTP '+res.status)
+  let data; try{ data=JSON.parse(raw) }catch(e){ throw new Error('响应不是 JSON') }
+  let content=data.choices?.[0]?.message?.content||''
+  if(Array.isArray(content)) content=content.map(x=>x?.text||'').join('')
+  let extra={}
+  const jm=String(content).match(/\{[\s\S]*\}/)
+  if(jm){ try{ extra=JSON.parse(jm[0]) }catch(e){} }
+  let story=String(content).replace(/```[\s\S]*?```/g,'').replace(/\{[\s\S]*\}/g,'').trim()
+  story=story.replace(/^(Let me|我写|应该|用户)[^\n]*\n?/gm,'').trim()
+  return {
+    story: story.slice(0,600)||localTurn(text).story,
+    moneyAdd:Number(extra.money)||0,
+    progAdd:Number(extra.prog)||0,
+    item: extra.item && extra.item.name ? extra.item : null,
+    quest: extra.quest && extra.quest.title ? extra.quest : null,
+    place: extra.place || null,
+    log: text.slice(0,20)
+  }
+}
+
+document.querySelectorAll('nav button').forEach(b=>{
+  b.onclick=()=>{ app.tab=b.dataset.tab; render() }
+})
+
+Object.assign(app.config, cfgGet())
+render()
+window.__LVJIE__=app
+})()
+</script>
+</body>
+</html>
