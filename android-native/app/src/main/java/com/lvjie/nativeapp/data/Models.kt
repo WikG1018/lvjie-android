@@ -6,11 +6,11 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class Place(
-    val id: String,
-    val name: String,
-    val type: String,
-    val world: String,
-    val desc: String,
+    val id: String = "",
+    val name: String = "未知",
+    val type: String = "地点",
+    val world: String = "",
+    val desc: String = "",
     val people: List<String> = emptyList(),
     val shop: Boolean = false,
 )
@@ -24,8 +24,8 @@ data class ActionDef(
 
 @Serializable
 data class InventoryItem(
-    val name: String,
-    val type: String, // consumable / equip / technique / material / special
+    val name: String = "物品",
+    val type: String = "consumable",
     val count: Int = 1,
     val desc: String = "",
     val effect: String? = null,
@@ -35,26 +35,26 @@ data class InventoryItem(
 
 @Serializable
 data class Quest(
-    val title: String,
-    val status: String, // active / done / failed
-    val from: String,
-    val desc: String,
-    val reward: String,
+    val title: String = "任务",
+    val status: String = "active",
+    val from: String = "",
+    val desc: String = "",
+    val reward: String = "",
 )
 
 @Serializable
 data class Friend(
-    val name: String,
-    val rel: String,
-    val favor: Int,
-    val at: String,
-    val intro: String,
+    val name: String = "",
+    val rel: String = "相识",
+    val favor: Int = 0,
+    val at: String = "",
+    val intro: String = "",
 )
 
 @Serializable
 data class BigEvent(
-    val age: String,
-    val text: String,
+    val age: String = "",
+    val text: String = "",
 )
 
 @Serializable
@@ -226,7 +226,55 @@ object WorldPacks {
         ),
     )
 
-    fun byId(id: String): WorldPack = all.firstOrNull { it.id == id } ?: all.first()
+    /** 内置包或已注册自定义包；未知 id 显式回退并可被上层提示 */
+    fun byId(id: String): WorldPack = registry[id] ?: all.first()
+
+    private val registry: MutableMap<String, WorldPack> = HashMap<String, WorldPack>().apply {
+        all.forEach { put(it.id, it) }
+    }
+
+    fun isBuiltin(id: String): Boolean = all.any { it.id == id }
+
+    /** 把 CustomPack 适配为可玩的 WorldPack */
+    fun registerCustom(cp: CustomPack) {
+        val places = cp.placeNames.mapIndexed { i, name ->
+            Place(
+                id = "c$i",
+                name = name,
+                type = "地点",
+                world = cp.name,
+                desc = "${cp.name}世界中的一处。",
+                people = emptyList(),
+                shop = i == 0,
+            )
+        }
+        val pack = WorldPack(
+            id = cp.id,
+            name = cp.name,
+            icon = "🛠",
+            tagline = cp.tagline,
+            level = "等级",
+            progress = "进度",
+            money = "金币",
+            advance = "晋阶",
+            tiers = if (cp.tiers.isEmpty()) listOf("初", "中", "高") else cp.tiers,
+            places = if (places.isEmpty()) listOf(Place("c0", "起点", "地点", cp.name, "旅程的起点。")) else places,
+            actions = listOf(
+                ActionDef("travel", "🗺 探索", "四处探索"),
+                ActionDef("talk", "💬 交谈", "与人交谈"),
+                ActionDef("fight", "⚔ 挑战", "迎接挑战"),
+                ActionDef("search", "🔍 搜寻", "搜寻机缘"),
+                ActionDef("rest", "🧘 休整", "休整恢复"),
+            ),
+            startText = "「${cp.name}」的故事开始了。",
+            colors = com.lvjie.nativeapp.ui.theme.WorldPalettes.Western,
+        )
+        registry[cp.id] = pack
+    }
+
+    fun unregisterCustom(id: String) {
+        if (!isBuiltin(id)) registry.remove(id)
+    }
 }
 
 object SampleContent {
