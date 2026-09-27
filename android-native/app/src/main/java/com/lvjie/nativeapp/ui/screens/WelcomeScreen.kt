@@ -34,6 +34,7 @@ fun WelcomeScreen(
     onAuthor: () -> Unit,
     onApi: () -> Unit,
     onHelp: () -> Unit,
+    customPacks: List<com.lvjie.nativeapp.data.CustomPack> = emptyList(),
 ) {
     val c = LocalLvjieColors.current
     val pack = WorldPacks.byId(selectedId)
@@ -103,6 +104,21 @@ fun WelcomeScreen(
                     )
                 } else {
                     Spacer(Modifier.weight(1f))
+                }
+            }
+        }
+
+        if (customPacks.isNotEmpty()) {
+            item { SectionLabel("自定义世界 · ${customPacks.size}") }
+            items(customPacks.size) { i ->
+                val cp = customPacks[i]
+                LvjieCard {
+                    ListItem(
+                        icon = "🛠",
+                        title = cp.name,
+                        subtitle = "${cp.tagline.take(18)} · ${cp.tiers.size} 阶 · ${cp.placeNames.size} 地点",
+                        trail = { LvjieChip("已保存", selected = true) },
+                    )
                 }
             }
         }
