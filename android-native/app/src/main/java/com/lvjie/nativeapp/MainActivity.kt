@@ -47,8 +47,8 @@ class MainActivity : ComponentActivity() {
             val exportJson by vm.exportJson.collectAsStateWithLifecycle()
             val customPacks by vm.customPacks.collectAsStateWithLifecycle()
 
-            var screen by remember { mutableStateOf(AppScreen.Welcome) }
-            var gameTab by remember { mutableStateOf(GameTab.Scene) }
+            var screen by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(AppScreen.Welcome) }
+            var gameTab by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(GameTab.Scene) }
 
             // 生命周期：暂停/恢复 BGM，退出前存档
             val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
@@ -137,9 +137,21 @@ fun AppRoot(
             when (screen) {
                 AppScreen.Welcome -> WelcomeScreen(
                     selectedId = pack.id,
-                    onSelectWorld = { vm.selectWorld(it) },
+                    onSelectWorld = { id ->
+                        vm.selectWorld(id)
+                        // 自定义包注册后即可作为主题/开局
+                        customPacks.firstOrNull { it.id == id }?.let { cp ->
+                            com.lvjie.nativeapp.data.WorldPacks.registerCustom(cp)
+                            vm.selectWorld(cp.id)
+                        }
+                    },
                     onStart = {
-                        vm.startGame(pack.id)
+                        vm.startOrContinue(pack.id)
+                        onScreen(AppScreen.Game)
+                        onGameTab(GameTab.Scene)
+                    },
+                    onContinue = {
+                        vm.continueLast()
                         onScreen(AppScreen.Game)
                         onGameTab(GameTab.Scene)
                     },
@@ -148,11 +160,22 @@ fun AppRoot(
                     onApi = { onScreen(AppScreen.Api) },
                     onHelp = { onScreen(AppScreen.Help) },
                     customPacks = customPacks,
+                    saveName = state.name,
+                    saveLevel = tierLabel(state, pack),
+                    savePlace = runCatching {
+                        pack.places.firstOrNull { it.id == state.loc }?.name ?: ""
+                    }.getOrDefault(""),
+                    hasSave = state.name.isNotBlank(),
                 )
                 AppScreen.Detail -> DetailScreen(
                     pack = pack,
                     onStart = {
-                        vm.startGame(pack.id)
+                        vm.startOrContinue(pack.id)
+                        onScreen(AppScreen.Game)
+                        onGameTab(GameTab.Scene)
+                    },
+                    onNewGame = {
+                        vm.startGame(pack.id, forceNew = true)
                         onScreen(AppScreen.Game)
                         onGameTab(GameTab.Scene)
                     },
@@ -168,8 +191,14 @@ fun AppRoot(
                     config = llmConfig,
                     models = models,
                     onBack = { onScreen(AppScreen.Welcome) },
-                    onTest = { vm.testApi() },
-                    onRefreshModels = { vm.refreshModels() },
+                    onTest = { b, m, k, p ->
+                        vm.saveLlmConfig(b, m, k, p)
+                        vm.testApi()
+                    },
+                    onRefreshModels = { b, m, k, p ->
+                        vm.saveLlmConfig(b, m, k, p)
+                        vm.refreshModels()
+                    },
                     onSave = { b, m, k, p -> vm.saveLlmConfig(b, m, k, p) },
                 )
                 AppScreen.Help -> HelpScreen()
