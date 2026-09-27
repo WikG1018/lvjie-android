@@ -44,6 +44,7 @@ class MainActivity : ComponentActivity() {
             val breakthrough by vm.breakthrough.collectAsStateWithLifecycle()
             val llmConfig by vm.llmConfig.collectAsStateWithLifecycle()
             val models by vm.modelList.collectAsStateWithLifecycle()
+            val exportJson by vm.exportJson.collectAsStateWithLifecycle()
 
             var screen by remember { mutableStateOf(AppScreen.Welcome) }
             var gameTab by remember { mutableStateOf(GameTab.Scene) }
@@ -59,6 +60,7 @@ class MainActivity : ComponentActivity() {
                     breakthrough = breakthrough,
                     llmConfig = llmConfig,
                     models = models,
+                    exportJson = exportJson,
                     onScreen = { screen = it },
                     onGameTab = { gameTab = it },
                     vm = vm,
@@ -81,6 +83,7 @@ fun AppRoot(
     breakthrough: String?,
     llmConfig: com.lvjie.nativeapp.llm.LlmConfig,
     models: List<String>,
+    exportJson: String?,
     onScreen: (AppScreen) -> Unit,
     onGameTab: (GameTab) -> Unit,
     vm: GameViewModel,
@@ -130,7 +133,13 @@ fun AppRoot(
                         onGameTab(GameTab.Scene)
                     },
                 )
-                AppScreen.Author -> AuthorScreen()
+                AppScreen.Author -> AuthorScreen(
+                    onSaved = { name, tag, tiers, places ->
+                        val id = "custom_" + System.currentTimeMillis()
+                        vm.saveCustomPack(id, name, tag, tiers, places)
+                        onScreen(AppScreen.Welcome)
+                    },
+                )
                 AppScreen.Api -> ApiScreen(
                     config = llmConfig,
                     models = models,
@@ -155,10 +164,12 @@ fun AppRoot(
                     GameTab.Settings -> SettingsScreen(
                         state = state, pack = pack,
                         onAiStyle = { vm.setAiStyle(it) },
+                        onLang = { vm.setLang(it) },
                         onToggleLimit = { vm.toggleLimit() },
                         onToggleBgm = { vm.toggleBgm() },
                         onApi = { onScreen(AppScreen.Api) },
-                        onExport = { vm.clearFeedback() },
+                        onExport = { vm.exportSaves() },
+                        onImport = { raw -> vm.importSaves(raw) },
                         onDelete = { showDelete = true },
                     )
                 }
@@ -219,6 +230,22 @@ fun AppRoot(
         }
     }
 
+    // 导出 JSON → 系统分享
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val exportPayload = exportJson
+    if (exportPayload != null) {
+        LaunchedEffect(exportPayload) {
+            val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                type = "application/json"
+                putExtra(android.content.Intent.EXTRA_TEXT, exportPayload)
+            }
+            runCatching {
+                context.startActivity(android.content.Intent.createChooser(intent, "分享存档 JSON"))
+            }
+            vm.clearExportJson()
+        }
+    }
+
     if (showDelete) {
         AlertDialog(
             onDismissRequest = { showDelete = false },
@@ -227,7 +254,9 @@ fun AppRoot(
             confirmButton = {
                 TextButton(onClick = {
                     showDelete = false
-                    onScreen(AppScreen.Welcome)
+                    vm.deleteCurrentSave {
+                        onScreen(AppScreen.Welcome)
+                    }
                 }) { Text("确认删除", color = c.error) }
             },
             dismissButton = {
