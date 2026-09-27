@@ -254,6 +254,7 @@ fun ApiScreen(
     var baseUrl by remember { mutableStateOf(config.baseUrl) }
     var model by remember { mutableStateOf(config.model) }
     var key by remember { mutableStateOf(config.apiKey) }
+    var keyVisible by remember { mutableStateOf(false) }
     var chat by remember { mutableStateOf(config.protocol == "chat") }
     LaunchedEffect(Unit) {
         baseUrl = config.baseUrl
@@ -310,7 +311,12 @@ fun ApiScreen(
                     value = key, onValueChange = { key = it },
                     label = { Text("API Key") }, modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(Radius.Md), singleLine = true,
-                    visualTransformation = PasswordVisualTransformation(),
+                    visualTransformation = if (keyVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                    trailingIcon = {
+                        TextButton(onClick = { keyVisible = !keyVisible }) {
+                            Text(if (keyVisible) "隐藏" else "显示", fontSize = 11.sp)
+                        }
+                    },
                 )
                 Spacer(Modifier.height(6.dp))
                 Text("Keystore AES-256-GCM 加密保存；导出存档不含 Key。", color = c.ink3, fontSize = 11.sp)
