@@ -36,8 +36,31 @@ class LlmService(
                 .addHeader("Authorization", "Bearer ${cfg.apiKey}")
                 .get().build()
             http.newCall(req).execute().use { r ->
-                if (!r.isSuccessful) error("HTTP ${r.code}")
-                "连通正常 · ${r.code}"
+                if (r.isSuccessful) {
+                    return@runCatching "连通正常 · GET /models ${r.code}"
+                }
+                // /models 不可用时用最短 completion 探测
+                val path = if (cfg.protocol == "response") "/responses" else "/chat/completions"
+                val payload = buildJsonObject {
+                    put("model", cfg.model)
+                    put("stream", false)
+                    put("max_tokens", 1)
+                    if (cfg.protocol == "response") put("input", "ping")
+                    else {
+                        putJsonArray("messages") {
+                            addJsonObject { put("role", "user"); put("content", "ping") }
+                        }
+                    }
+                }
+                val req2 = Request.Builder()
+                    .url(cfg.baseUrl.trimEnd('/') + path)
+                    .addHeader("Authorization", "Bearer ${cfg.apiKey}")
+                    .post(payload.toString().toRequestBody("application/json".toMediaType()))
+                    .build()
+                http.newCall(req2).execute().use { r2 ->
+                    if (!r2.isSuccessful) error("HTTP ${r.code}/${r2.code}")
+                    "连通正常 · POST $path ${r2.code}"
+                }
             }
         }
     }
