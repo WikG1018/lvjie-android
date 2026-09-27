@@ -71,3 +71,24 @@
 | LLM 早结保底收益 | PASS |
 
 **结论：v1.1.1 可发版。P2 主要项已关闭。**
+
+# v1.2.0 三轮复审测试
+
+| 用例 | 结果 |
+|------|------|
+| CancellationException 上抛 | PASS |
+| tiers 越界防护 | PASS |
+| hasSave 真实状态 | PASS |
+| BackHandler 系统返回 | PASS |
+| 导入按 worldId 落键 | PASS |
+| 导出含 customPacks | PASS |
+| loadJob 竞态守卫 | PASS |
+| useItem 原子更新 | PASS |
+| BgmPlayer 同步释放 | PASS |
+| test() POST 兜底 | PASS |
+| 结算后 persist | PASS |
+| 自定义包校验 | PASS |
+| Json 单例 | PASS |
+| 构建/签名/体积 13MB | PASS |
+
+**结论：P0 二次发现的 2 项已关闭，P1 复核项关闭，v1.2.0 可发。**
