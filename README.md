@@ -1,3 +1,7 @@
+> **独立项目（WikG1018）** — 本仓库基于 [Fly143/LvJie-WanJie](https://github.com/Fly143/LvJie-WanJie) `master @ 415e379`（v0.0.3）复制而来，用于推进 **安卓原生版（Compose · HyperOS 美学）** 独立演进，不向原仓库直接推 PR。
+>
+> 设计规划见 [`docs/design/index.html`](docs/design/index.html)。原项目版权归原作者所有（MIT）。
+
 <div align="center">
 
 # 旅界（LvJie）

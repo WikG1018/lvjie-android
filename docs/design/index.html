@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>旅界 · 安卓原生版设计规划 v2.0</title>
+  <meta name="description" content="旅界安卓原生版设计规范：MiSans 字阶、HyperOS × Material 3、14 页面详解、组件库分类。">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-in">
+    <div class="brand">
+      <div class="brand-mark">旅</div>
+      <div>
+        <b>旅界 · 安卓原生版</b>
+        <span>DESIGN SPEC · MiSans · HYPEROS</span>
+      </div>
+    </div>
+    <div class="top-actions">
+      <span class="pill ghost hide-sm">上游 v0.0.3</span>
+      <span class="pill accent">WikG1018 独立项目</span>
+    </div>
+  </div>
+</header>
+
+<div class="layout">
+  <aside class="side" id="side-nav">
+    <!-- filled by app.js -->
+  </aside>
+
+  <main class="main">
+
+    <!-- HERO -->
+    <section class="hero" id="sec-overview">
+      <div class="hero-kicker"><i></i>ANDROID NATIVE · DESIGN SPEC v2.0</div>
+      <h1>把「旅界」做成<br>一部<em>真正属于手机</em>的<br>开放世界文字游戏</h1>
+      <p class="hero-lead">
+        基于 <b>Fly143/LvJie-WanJie</b> 最新 master（v0.0.3）的完整功能盘点，
+        按 Android 最新规范与小米澎湃 OS 开发美学重设计。
+        全文使用 <b>MiSans</b> 字体，覆盖色彩 / 字阶 / 形状 / 组件 / <b>14 个页面</b> 逐页规格。
+      </p>
+      <div class="hero-meta">
+        <div class="chip"><b>原作</b> AI 多世界观文字游戏</div>
+        <div class="chip"><b>目标</b> Kotlin · Compose · M3</div>
+        <div class="chip"><b>视觉</b> HyperOS × Material You</div>
+        <div class="chip"><b>字体</b> MiSans</div>
+      </div>
+
+      <div class="theme-bar">
+        <div class="theme-bar-label">
+          <span>世界观主题 · 点击切换全局强调色（含所有页面 mockup）</span>
+          <span id="theme-name">修仙</span>
+        </div>
+        <div class="theme-row" id="theme-row"></div>
+      </div>
+
+      <div class="grid-4 keep" style="margin-bottom:16px">
+        <div class="stat accent"><div class="k">页面规格</div><div class="v">14<small>页</small></div></div>
+        <div class="stat"><div class="k">组件分类</div><div class="v">6<small>类</small></div></div>
+        <div class="stat"><div class="k">世界观皮肤</div><div class="v">6<small>套</small></div></div>
+        <div class="stat"><div class="k">上游版本</div><div class="v">0.0.3</div></div>
+      </div>
+    </section>
+
+    <!-- GitHub -->
+    <section class="sec" id="sec-github-latest">
+      <div class="sec-head">
+        <div class="sec-num">UPSTREAM · 最新查询</div>
+        <h2>上游仓库最新信息</h2>
+        <p class="desc">2026-09-27 查询 Fly143/LvJie-WanJie：已发 v0.0.3，功能持续演进；Android 仍是 WebView 壳——正是我们做原生版的时机。</p>
+      </div>
+      <div id="github-box"></div>
+    </section>
+
+    <!-- A1 principles -->
+    <section class="sec" id="sec-principles">
+      <div class="sec-head">
+        <div class="sec-num">A1 — PRINCIPLES</div>
+        <h2>设计原则</h2>
+        <p class="desc">四条原则贯穿所有界面决策，冲突时按序取舍。</p>
+      </div>
+      <div class="principle">
+        <div class="pn">P1</div>
+        <h3>叙事优先，数据退后</h3>
+        <p>主场景永远最大面积留给故事。数值、进度、货币收进状态胶囊与底部抽屉，不与剧情争夺注意力。</p>
+      </div>
+      <div class="principle">
+        <div class="pn">P2</div>
+        <h3>一世界一皮肤</h3>
+        <p>每套世界观自带色彩、文案词表、升级动词。进入世界即整机换肤；回到列表恢复中性系统色。</p>
+      </div>
+      <div class="principle">
+        <div class="pn">P3</div>
+        <h3>单手热区操作</h3>
+        <p>高频动作（行动、发送、选项、突破）落在拇指热区。顶栏只放状态与低频入口；危险操作进确认层。</p>
+      </div>
+      <div class="principle">
+        <div class="pn">P4</div>
+        <h3>状态即反馈</h3>
+        <p>AI 流式生成、数值变化、突破成功、任务达成——每个状态变化都有触感、微动效或 SnackBar，不静默失败。</p>
+      </div>
+    </section>
+
+    <!-- A2 color -->
+    <section class="sec" id="sec-color">
+      <div class="sec-head">
+        <div class="sec-num">A2 — COLOR SYSTEM</div>
+        <h2>色彩系统</h2>
+        <p class="desc">按「中性骨架 / 品牌强调 / 功能语义 / 世界观主题」四级分类。世界主题只替换强调色系，骨架保持一致。</p>
+      </div>
+      <div id="color-groups"></div>
+      <div class="card">
+        <h3><span class="dot"></span>六套世界观强调色</h3>
+        <p>点顶部主题条可实时预览。每套包含 accent / soft / deep / glow，映射 Material 3 的 primary / primaryContainer / onPrimaryContainer / elevation overlay。</p>
+        <div class="swatches" id="world-swatches" style="margin-top:12px"></div>
+      </div>
+      <div class="card">
+        <h3><span class="dot"></span>世界观词表（文案随皮肤切换）</h3>
+        <p>等级、进度、货币、升级动词全部来自世界包 lexicon，客户端不硬编码。</p>
+        <div class="flist" id="world-lexicon" style="margin-top:12px"></div>
+      </div>
+    </section>
+
+    <!-- A3 type -->
+    <section class="sec" id="sec-type">
+      <div class="sec-head">
+        <div class="sec-num">A3 — TYPOGRAPHY</div>
+        <h2>字体排印 · MiSans</h2>
+        <p class="desc">正文与标题统一 MiSans（本地字体资源 + Web 预览同源）。剧情正文可选衬线增强「在读故事」感；数值启用等宽数字。</p>
+      </div>
+      <div class="card">
+        <h3><span class="dot"></span>字阶标本</h3>
+        <div id="type-rows"></div>
+      </div>
+      <div class="card">
+        <h3><span class="dot"></span>使用规则</h3>
+        <div class="flist">
+          <div class="fitem"><div class="fi">Aa</div><div><div class="ft">单一字族</div><div class="fd">MiSans 全局；不混用第三方中文字体。字重只用 400 / 500 / 700（Semibold 650 用于强调）。</div></div></div>
+          <div class="fitem"><div class="fi">12</div><div><div class="ft">等宽数字</div><div class="fd">战力、货币、进度等数值启用 tabular-nums，保证列表右对齐扫读。</div></div></div>
+          <div class="fitem"><div class="fi">¶</div><div><div class="ft">剧情衬线</div><div class="fd">事件叙事正文可用 Noto Serif SC / 思源宋体；UI chrome 永远无衬线。</div></div></div>
+          <div class="fitem"><div class="fi">↔</div><div><div class="ft">可缩放</div><div class="fd">跟随系统字体缩放到 1.3× 时禁止截断；卡片高度允许增高。</div></div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- A4 shape -->
+    <section class="sec" id="sec-shape">
+      <div class="sec-head">
+        <div class="sec-num">A4 — SHAPE · SPACE · ELEVATION</div>
+        <h2>形状 · 间距 · 海拔</h2>
+        <p class="desc">澎湃美学的「软」来自大圆角、克制阴影、4px 网格节奏。</p>
+      </div>
+      <div class="card">
+        <h3><span class="dot"></span>形状与尺寸</h3>
+        <div id="shape-rows"></div>
+      </div>
+      <div class="card">
+        <h3><span class="dot"></span>海拔阴影</h3>
+        <div id="elev-rows"></div>
+      </div>
+    </section>
+
+    <!-- B1 IA -->
+    <section class="sec" id="sec-ia">
+      <div class="sec-head">
+        <div class="sec-num">B1 — INFORMATION ARCHITECTURE</div>
+        <h2>导航层级树</h2>
+        <p class="desc">从桌面「顶栏 + 左侧栏」重构为手机单栏 + 底部导航 + 抽屉详情。</p>
+      </div>
+      <div class="card">
+        <div class="tree">
+          <div class="node root"><div class="ttl">旅界 · 应用根</div><div class="sub">Single Activity · Navigation Compose</div></div>
+          <div class="kids">
+            <div class="node"><div class="ttl">A. 未进入存档（Onboarding Graph）</div><div class="sub">启动 · 世界选择 · 工坊 · API · 帮助</div></div>
+            <div class="kids">
+              <div class="node"><div class="ttl">A1 欢迎 / 世界选择 → P01</div><div class="sub">卡片 · 存档摘要 · 主 CTA</div></div>
+              <div class="node"><div class="ttl">A2 世界详情 → P02</div><div class="sub">介绍 / 等级表 / 地图</div></div>
+              <div class="node"><div class="ttl">A3 自定义世界工坊 → P03</div><div class="sub">四步向导</div></div>
+              <div class="node"><div class="ttl">A4 API 设置 → P04</div><div class="sub">协议 · 凭据 · 连通性</div></div>
+              <div class="node"><div class="ttl">A5 帮助 → P05</div><div class="sub">快速开始 · FAQ</div></div>
+            </div>
+            <div class="node"><div class="ttl">B. 游戏主壳（Game Graph）</div><div class="sub">底部 5 Tab + StatusPill</div></div>
+            <div class="kids">
+              <div class="node"><div class="ttl">B1 场景 · 叙事 → P06</div><div class="sub">地点 · 行动 · 事件流 · 自由输入</div></div>
+              <div class="node"><div class="ttl">B2 地图 → P07</div><div class="sub">界层折叠 · 移动</div></div>
+              <div class="node"><div class="ttl">B3 人物 → P08</div><div class="sub">身份 · 成长 · 经历</div></div>
+              <div class="node"><div class="ttl">B4 同伴 → P09</div><div class="sub">档案 · 好感 · 记忆注入</div></div>
+              <div class="node"><div class="ttl">B5 囊务（任务+行囊）→ P10 / P11</div><div class="sub">分段切换</div></div>
+              <div class="node"><div class="ttl">B6 设置 → P12</div><div class="sub">偏好 · 媒体 · 数据 · 关于</div></div>
+            </div>
+            <div class="node"><div class="ttl">C. 浮层（Overlay）</div><div class="sub">突破 P13 · 抽屉 P14 · Dialog</div></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- B2 flow -->
+    <section class="sec" id="sec-flow">
+      <div class="sec-head">
+        <div class="sec-num">B2 — CORE FLOW</div>
+        <h2>核心任务流 · 事件回合</h2>
+      </div>
+      <div class="card">
+        <div class="motion-item"><div class="mv">01</div><div class="mc"><b>触发</b><span>点场景行动 / 选中选项 / 输入自由行动</span></div></div>
+        <div class="motion-item"><div class="mv">02</div><div class="mc"><b>请求</b><span>组装世界包铁律 + 角色状态 + NPC 记忆 → 调用 LLM</span></div></div>
+        <div class="motion-item"><div class="mv">03</div><div class="mc"><b>流式叙事</b><span>正文分段淡入，ProgressDots 呼吸，轻触感</span></div></div>
+        <div class="motion-item"><div class="mv">04</div><div class="mc"><b>落库</b><span>解析 JSON changes：货币/进度/物品/任务/同伴 → StatusPill 微动效</span></div></div>
+        <div class="motion-item"><div class="mv">05</div><div class="mc"><b>反馈</b><span>选项列表就位；重大变化走 SnackBar + 星标事件</span></div></div>
+      </div>
+    </section>
+
+    <!-- C components (filled by JS) -->
+    <section class="sec" id="comp-nav"></section>
+    <section class="sec" id="comp-action"></section>
+    <section class="sec" id="comp-form"></section>
+    <section class="sec" id="comp-feedback"></section>
+    <section class="sec" id="comp-data"></section>
+    <section class="sec" id="comp-float"></section>
+
+    <!-- D pages -->
+    <section class="sec" id="sec-pages">
+      <div class="sec-head">
+        <div class="sec-num">D — SCREEN SPECS</div>
+        <h2>页面详解 · 14 屏</h2>
+        <p class="desc">每页包含：设计目标 → 布局层级 → 元素规格表 → 状态变体 → 设计要点 → 主题化 mockup。</p>
+      </div>
+    </section>
+    <div id="page-list"></div>
+
+    <!-- E1 states -->
+    <section class="sec" id="sec-states">
+      <div class="sec-head">
+        <div class="sec-num">E1 — STATES &amp; ERRORS</div>
+        <h2>状态与异常</h2>
+        <p class="desc">统一状态语义，避免每页各写一套。</p>
+      </div>
+      <div class="card" id="state-list"></div>
+    </section>
+
+    <!-- E2 motion -->
+    <section class="sec" id="sec-motion">
+      <div class="sec-head">
+        <div class="sec-num">E2 — MOTION &amp; HAPTICS</div>
+        <h2>动效与触感</h2>
+        <p class="desc">曲线基准 Emphasized <b>cubic-bezier(0.2, 0, 0, 1)</b>；幅度克制，反馈明确。</p>
+      </div>
+      <div class="card" id="motion-list"></div>
+    </section>
+
+    <!-- E3 tech -->
+    <section class="sec" id="sec-tech">
+      <div class="sec-head">
+        <div class="sec-num">E3 — TECH ARCHITECTURE</div>
+        <h2>技术架构建议</h2>
+        <p class="desc">对齐 Android 最新规范；多语言与 Key 加密对齐上游 v0.0.3 能力。</p>
+      </div>
+      <div id="arch-layers"></div>
+      <div class="card">
+        <h3><span class="dot"></span>平台规范要点</h3>
+        <div class="flist" id="platform-list"></div>
+      </div>
+    </section>
+
+    <!-- E4 roadmap -->
+    <section class="sec" id="sec-roadmap">
+      <div class="sec-head">
+        <div class="sec-num">E4 — ROADMAP</div>
+        <h2>设计与交付路线图</h2>
+        <p class="desc">先定体验，再动代码。约 6–9 周到可上架。</p>
+      </div>
+      <div class="road" id="road-list"></div>
+    </section>
+
+    <!-- E5 repo -->
+    <section class="sec" id="sec-repo">
+      <div class="sec-head">
+        <div class="sec-num">E5 — INDEPENDENT REPO</div>
+        <h2>独立项目与同步策略</h2>
+        <p class="desc">不向原仓库推 PR；复制到 <b>WikG1018</b> 名下建立独立项目，自主演进。</p>
+      </div>
+      <div id="repo-list"></div>
+    </section>
+
+    <div class="foot">
+      <b>旅界 · 安卓原生版设计规划 v2.0</b><br>
+      基于 Fly143/LvJie-WanJie @ v0.0.3 · HyperOS × Material 3 · MiSans<br>
+      本文件为设计规划与规格说明，非最终视觉稿
+    </div>
+
+  </main>
+</div>
+
+<nav class="mnav">
+  <div class="mnav-in" id="mnav-in"></div>
+</nav>
+
+<script src="data.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
