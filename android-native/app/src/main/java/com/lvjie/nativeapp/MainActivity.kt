@@ -113,6 +113,7 @@ fun AppRoot(
 ) {
     val c = LocalLvjieColors.current
     var showDelete by remember { mutableStateOf(false) }
+    var showExitConfirm by remember { mutableStateOf(false) }
 
     Box(Modifier.fillMaxSize()) {
     Scaffold(
@@ -121,7 +122,9 @@ fun AppRoot(
         topBar = {
             TopBar(
                 screen = screen, pack = pack, state = state,
-                onBack = { onScreen(AppScreen.Welcome) },
+                onBack = {
+                    if (screen == AppScreen.Game) showExitConfirm = true else onScreen(AppScreen.Welcome)
+                },
                 modifier = Modifier.windowInsetsPadding(WindowInsets.statusBars),
             )
         },
@@ -210,6 +213,7 @@ fun AppRoot(
                         onOption = { vm.chooseOption(it) },
                         onEndEvent = { vm.endEvent() },
                         onFreeText = { vm.startEvent("travel", it) },
+                        onHint = { msg -> vm.debugHint(msg) },
                     )
                     GameTab.Map -> MapScreen(state, pack, onMove = { vm.moveTo(it) })
                     GameTab.Profile -> ProfileScreen(state, pack, onBreakthrough = { vm.breakthrough() })
@@ -292,11 +296,34 @@ fun AppRoot(
                 type = "application/json"
                 putExtra(android.content.Intent.EXTRA_TEXT, exportPayload)
             }
-            runCatching {
+            val ok = runCatching {
                 context.startActivity(android.content.Intent.createChooser(intent, "分享存档 JSON"))
+                true
+            }.getOrDefault(false)
+            if (ok) {
+                vm.clearExportJson()
+            } else {
+                vm.debugHint("分享失败，存档 JSON 已保留")
             }
-            vm.clearExportJson()
         }
+    }
+
+    if (showExitConfirm) {
+        AlertDialog(
+            onDismissRequest = { showExitConfirm = false },
+            title = { Text("返回世界列表？") },
+            text = { Text("存档会自动保存，可随时继续。") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showExitConfirm = false
+                    vm.persist()
+                    onScreen(AppScreen.Welcome)
+                }) { Text("返回") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showExitConfirm = false }) { Text("继续游戏") }
+            },
+        )
     }
 
     if (showDelete) {
