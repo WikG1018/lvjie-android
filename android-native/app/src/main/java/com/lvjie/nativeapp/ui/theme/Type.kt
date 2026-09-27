@@ -6,13 +6,18 @@ import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
+import com.lvjie.nativeapp.R
 
 /**
  * MiSans 字阶 — 与设计规范 A3 一致。
  * 若 res/font/misans_* 未放入，系统回落 PingFang / Noto Sans SC。
  */
-// MiSans 字体资源放 res/font/misans_*.ttf 后可启用；当前回落系统无衬线
-val MiSans: FontFamily = FontFamily.SansSerif
+val MiSans: FontFamily = FontFamily(
+    Font(R.font.misans_regular, FontWeight.Normal),
+    Font(R.font.misans_medium, FontWeight.Medium),
+    Font(R.font.misans_semibold, FontWeight.SemiBold),
+    Font(R.font.misans_bold, FontWeight.Bold),
+)
 
 val LvjieTypography = Typography(
     displayLarge = TextStyle(
