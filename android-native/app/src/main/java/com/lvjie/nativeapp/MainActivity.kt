@@ -45,9 +45,30 @@ class MainActivity : ComponentActivity() {
             val llmConfig by vm.llmConfig.collectAsStateWithLifecycle()
             val models by vm.modelList.collectAsStateWithLifecycle()
             val exportJson by vm.exportJson.collectAsStateWithLifecycle()
+            val customPacks by vm.customPacks.collectAsStateWithLifecycle()
 
             var screen by remember { mutableStateOf(AppScreen.Welcome) }
             var gameTab by remember { mutableStateOf(GameTab.Scene) }
+
+            // 生命周期：暂停/恢复 BGM，退出前存档
+            val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+            androidx.compose.runtime.DisposableEffect(lifecycleOwner) {
+                val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+                    when (event) {
+                        androidx.lifecycle.Lifecycle.Event.ON_PAUSE -> vm.bgm.pause()
+                        androidx.lifecycle.Lifecycle.Event.ON_RESUME -> {
+                            if (state.bgm) vm.bgm.play()
+                        }
+                        androidx.lifecycle.Lifecycle.Event.ON_STOP -> vm.persist()
+                        else -> Unit
+                    }
+                }
+                lifecycleOwner.lifecycle.addObserver(observer)
+                onDispose {
+                    lifecycleOwner.lifecycle.removeObserver(observer)
+                    vm.persist()
+                }
+            }
 
             LvjieTheme(world = pack.colors) {
                 AppRoot(
@@ -61,6 +82,7 @@ class MainActivity : ComponentActivity() {
                     llmConfig = llmConfig,
                     models = models,
                     exportJson = exportJson,
+                    customPacks = customPacks,
                     onScreen = { screen = it },
                     onGameTab = { gameTab = it },
                     vm = vm,
@@ -84,6 +106,7 @@ fun AppRoot(
     llmConfig: com.lvjie.nativeapp.llm.LlmConfig,
     models: List<String>,
     exportJson: String?,
+    customPacks: List<com.lvjie.nativeapp.data.CustomPack>,
     onScreen: (AppScreen) -> Unit,
     onGameTab: (GameTab) -> Unit,
     vm: GameViewModel,
@@ -124,6 +147,7 @@ fun AppRoot(
                     onAuthor = { onScreen(AppScreen.Author) },
                     onApi = { onScreen(AppScreen.Api) },
                     onHelp = { onScreen(AppScreen.Help) },
+                    customPacks = customPacks,
                 )
                 AppScreen.Detail -> DetailScreen(
                     pack = pack,
@@ -153,7 +177,7 @@ fun AppRoot(
                     GameTab.Scene -> SceneScreen(
                         state = state, pack = pack, event = event,
                         onAction = { vm.startEvent(it) },
-                        onTalk = { vm.startEvent("talk", "与${it}交谈") },
+                        onTalk = { name -> vm.talkWith(name) },
                         onOption = { vm.chooseOption(it) },
                         onEndEvent = { vm.endEvent() },
                         onFreeText = { vm.startEvent("travel", it) },
