@@ -136,7 +136,15 @@ fun DetailScreen(pack: WorldPack, onStart: () -> Unit, onNewGame: () -> Unit = o
 
 /** P03 自定义世界工坊（四步向导） */
 @Composable
-fun AuthorScreen(onSaved: (name: String, tagline: String, tiers: List<String>, places: List<String>) -> Unit = { _, _, _, _ -> }) {
+fun AuthorScreen(
+    draftName: String = "",
+    draftTagline: String = "",
+    draftTiers: List<String> = emptyList(),
+    draftPlaces: List<String> = emptyList(),
+    draftProgress: Float = 0f,
+    onGenerate: (name: String, tagline: String, source: String) -> Unit = { _, _, _ -> },
+    onSaved: (name: String, tagline: String, tiers: List<String>, places: List<String>) -> Unit = { _, _, _, _ -> },
+) {
     val c = LocalLvjieColors.current
     var step by remember { mutableStateOf(1) }
     var waName by remember { mutableStateOf("凡人修仙传") }
@@ -233,23 +241,14 @@ fun AuthorScreen(onSaved: (name: String, tagline: String, tiers: List<String>, p
                 }
             }
             3 -> item {
-                var progress by remember { mutableStateOf(0.15f) }
-                var phase by remember { mutableStateOf("考据设定…") }
                 LaunchedEffect(Unit) {
-                    val phases = listOf(
-                        0.3f to "合并世界观…",
-                        0.55f to "生成等级与地点…",
-                        0.78f to "编纂人物档案…",
-                        0.95f to "校对草稿…",
-                        1f to "完成",
-                    )
-                    phases.forEach { (p, ph) ->
-                        kotlinx.coroutines.delay(420)
-                        progress = p
-                        phase = ph
+                    onGenerate(waName, waTag, source)
+                }
+                LaunchedEffect(draftProgress) {
+                    if (draftProgress >= 1f) {
+                        kotlinx.coroutines.delay(300)
+                        step = 4
                     }
-                    kotlinx.coroutines.delay(280)
-                    step = 4
                 }
                 LvjieCard {
                     Column(
@@ -258,11 +257,14 @@ fun AuthorScreen(onSaved: (name: String, tagline: String, tiers: List<String>, p
                     ) {
                         Dots()
                         Spacer(Modifier.height(12.dp))
-                        Text(phase, color = c.ink2, fontSize = 13.sp)
+                        Text(
+                            if (draftProgress < 1f) "正在生成草稿…" else "完成",
+                            color = c.ink2, fontSize = 13.sp,
+                        )
                         Spacer(Modifier.height(12.dp))
-                        ProgressBar(progress)
+                        ProgressBar(draftProgress.coerceIn(0f, 1f))
                         Spacer(Modifier.height(8.dp))
-                        Text("基于「$waName」生成可玩草稿", color = c.ink3, fontSize = 11.sp)
+                        Text("基于「$waName」· 来源：$source", color = c.ink3, fontSize = 11.sp)
                         Spacer(Modifier.height(16.dp))
                         LvjieButton("跳过等待", onClick = { step = 4 }, style = BtnStyle.Outline, small = true)
                     }
@@ -276,7 +278,7 @@ fun AuthorScreen(onSaved: (name: String, tagline: String, tiers: List<String>, p
                         Box(Modifier.size(7.dp).clip(CircleShape).background(c.world.accent))
                     }
                     Spacer(Modifier.height(8.dp))
-                    Text("$waName · 等级 6 阶 · 地点 4 个 · ${waTag.take(20)}…", color = c.ink2, fontSize = 13.sp)
+                    Text(draftName.ifBlank { waName } + " · 等级 " + (draftTiers.size.takeIf { it > 0 } ?: 6) + " 阶 · 地点 " + (draftPlaces.size.takeIf { it > 0 } ?: 4) + " 个", color = c.ink2, fontSize = 13.sp)
                     Spacer(Modifier.height(10.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         pack.tiers.forEach { LvjieChip(it) }
@@ -285,7 +287,12 @@ fun AuthorScreen(onSaved: (name: String, tagline: String, tiers: List<String>, p
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         LvjieButton("返回修改", onClick = { step = 2 }, style = BtnStyle.Ghost, small = true)
                         LvjieButton("保存世界", onClick = {
-                        onSaved(waName, waTag, listOf("练气","筑基","金丹","元婴","化神","渡劫"), listOf("起点","山门","坊市","秘境"))
+                        onSaved(
+                        draftName.ifBlank { waName },
+                        draftTagline.ifBlank { waTag },
+                        if (draftTiers.size >= 2) draftTiers else listOf("初阶", "入门", "精通", "大成", "化境", "登峰"),
+                        if (draftPlaces.isNotEmpty()) draftPlaces else listOf("起点 · " + waName.take(4), "聚落", "险地", "秘境"),
+                    )
                         step = 1
                     }, small = true)
                     }
