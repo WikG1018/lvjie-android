@@ -61,9 +61,10 @@ fun SceneScreen(
                 Spacer(Modifier.height(8.dp))
                 Text(place.desc, color = c.ink2, fontSize = 12.5.sp, lineHeight = 20.sp)
                 Spacer(Modifier.height(12.dp))
+                val busy = event?.loading == true || event?.streaming == true
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.horizontalScroll(rememberScrollState())) {
                     pack.actions.forEach { a ->
-                        LvjieButton(a.label, onClick = { onAction(a.id) }, style = BtnStyle.Tonal, small = true)
+                        LvjieButton(a.label, onClick = { if (!busy) onAction(a.id) }, style = BtnStyle.Tonal, small = true, enabled = !busy)
                     }
                 }
             }
@@ -261,7 +262,7 @@ fun MapScreen(state: PlayerState, pack: WorldPack, onMove: (String) -> Unit) {
                 subtitle = "${p.type} · " + if (p.people.isEmpty()) "无人" else "${p.people.size} 人",
                 modifier = if (cur) Modifier.border(1.5.dp, c.world.accent, RoundedCornerShape(Radius.Md)) else Modifier,
                 trail = { LvjieChip(if (cur) "在此" else "前往", selected = cur) },
-                onClick = { if (!cur) onMove(p.id) },
+                onClick = if (cur) null else { { onMove(p.id) } },
             )
         }
     }
@@ -309,7 +310,7 @@ fun ProfileScreen(state: PlayerState, pack: WorldPack, onBreakthrough: () -> Uni
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 StatCell(pack.money, state.money.toString(), Modifier.weight(1f))
-                StatCell("技艺", "4 项", Modifier.weight(1f))
+                StatCell("同伴", "${state.friends.size} 人", Modifier.weight(1f))
             }
         }
         item {
@@ -344,8 +345,12 @@ fun ProfileScreen(state: PlayerState, pack: WorldPack, onBreakthrough: () -> Uni
                     Box(Modifier.size(7.dp).clip(CircleShape).background(c.world.accent))
                 }
                 Spacer(Modifier.height(10.dp))
-                state.events.forEach { e ->
-                    ListItem(icon = "✦", title = e.age, subtitle = e.text, modifier = Modifier.padding(vertical = 4.dp))
+                if (state.events.isEmpty()) {
+                    EmptyState("✦", "暂无经历", "行动后重大事件会记录在此")
+                } else {
+                    state.events.forEach { e ->
+                        ListItem(icon = "✦", title = e.age, subtitle = e.text, modifier = Modifier.padding(vertical = 4.dp))
+                    }
                 }
             }
         }
