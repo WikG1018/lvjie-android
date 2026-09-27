@@ -47,6 +47,8 @@ class MainActivity : ComponentActivity() {
             val exportJson by vm.exportJson.collectAsStateWithLifecycle()
             val customPacks by vm.customPacks.collectAsStateWithLifecycle()
             val hasSave by vm.hasSave.collectAsStateWithLifecycle()
+            val draft by vm.draft.collectAsStateWithLifecycle()
+            val draftProgress by vm.draftProgress.collectAsStateWithLifecycle()
 
             var screen by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(AppScreen.Welcome) }
             var gameTab by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(GameTab.Scene) }
@@ -85,6 +87,8 @@ class MainActivity : ComponentActivity() {
                     exportJson = exportJson,
                     customPacks = customPacks,
                     hasSave = hasSave,
+                    draft = draft,
+                    draftProgress = draftProgress,
                     onScreen = { screen = it },
                     onGameTab = { gameTab = it },
                     vm = vm,
@@ -110,6 +114,8 @@ fun AppRoot(
     exportJson: String?,
     customPacks: List<com.lvjie.nativeapp.data.CustomPack>,
     hasSave: Boolean,
+    draft: com.lvjie.nativeapp.engine.GameViewModel.WorldDraft?,
+    draftProgress: Float,
     onScreen: (AppScreen) -> Unit,
     onGameTab: (GameTab) -> Unit,
     vm: GameViewModel,
@@ -138,7 +144,7 @@ fun AppRoot(
         },
         bottomBar = {
             if (screen == AppScreen.Game) {
-                GameBottomBar(current = gameTab, onSelect = onGameTab)
+                GameBottomBar(current = gameTab, onSelect = onGameTab, strings = com.lvjie.nativeapp.i18n.I18n.of(state.lang))
             } else {
                 OnboardBar(current = screen, onScreen = onScreen)
             }
@@ -147,6 +153,7 @@ fun AppRoot(
         Box(Modifier.padding(pad).fillMaxSize()) {
             when (screen) {
                 AppScreen.Welcome -> WelcomeScreen(
+                    strings = com.lvjie.nativeapp.i18n.I18n.of(state.lang),
                     selectedId = pack.id,
                     onSelectWorld = { id ->
                         vm.selectWorld(id)
@@ -192,9 +199,16 @@ fun AppRoot(
                     },
                 )
                 AppScreen.Author -> AuthorScreen(
+                    draftName = draft?.name ?: "",
+                    draftTagline = draft?.tagline ?: "",
+                    draftTiers = draft?.tiers ?: emptyList(),
+                    draftPlaces = draft?.places ?: emptyList(),
+                    draftProgress = draftProgress,
+                    onGenerate = { name, tag, src -> vm.generateWorldDraft(name, tag, src) },
                     onSaved = { name, tag, tiers, places ->
                         val id = "custom_" + System.currentTimeMillis()
                         vm.saveCustomPack(id, name, tag, tiers, places)
+                        vm.clearDraft()
                         onScreen(AppScreen.Welcome)
                     },
                 )
