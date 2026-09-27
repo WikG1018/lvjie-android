@@ -5,9 +5,6 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -24,7 +21,10 @@ import com.lvjie.nativeapp.ui.components.*
 import com.lvjie.nativeapp.ui.theme.LocalLvjieColors
 import com.lvjie.nativeapp.ui.theme.Radius
 
-/** P01 欢迎 · 世界选择 */
+/**
+ * P01 欢迎 · 世界选择
+ * 世界卡片改为 LazyColumn 内的两列流式行，避免嵌套网格被裁切/遮挡。
+ */
 @Composable
 fun WelcomeScreen(
     selectedId: String,
@@ -37,6 +37,8 @@ fun WelcomeScreen(
 ) {
     val c = LocalLvjieColors.current
     val pack = WorldPacks.byId(selectedId)
+    val rows = WorldPacks.all.chunked(2)
+
     LazyColumn(
         modifier = Modifier.fillMaxSize().padding(horizontal = 14.dp),
         contentPadding = PaddingValues(vertical = 12.dp, horizontal = 2.dp),
@@ -50,11 +52,27 @@ fun WelcomeScreen(
                     .background(Brush.linearGradient(listOf(pack.colors.soft, c.surface)))
                     .padding(22.dp)
             ) {
-                Text("MAP OF WORLDS", color = pack.colors.accent, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.14f.sp)
+                Text(
+                    "MAP OF WORLDS",
+                    color = pack.colors.accent,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 0.14f.sp,
+                )
                 Spacer(Modifier.height(8.dp))
-                Text("地图上的${pack.name}世界", color = c.ink, fontSize = 26.sp, fontWeight = FontWeight.Bold, letterSpacing = (-0.025f).sp)
+                Text(
+                    "地图上的${pack.name}世界",
+                    color = c.ink,
+                    fontSize = 26.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = (-0.025f).sp,
+                )
                 Spacer(Modifier.height(8.dp))
-                Text("选择你的旅程，AI 即时编织剧情。各世界存档互不影响。", color = c.ink2, fontSize = 13.sp)
+                Text(
+                    "选择你的旅程，AI 即时编织剧情。各世界存档互不影响。",
+                    color = c.ink2,
+                    fontSize = 13.sp,
+                )
                 Spacer(Modifier.height(12.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     LvjieButton("开始旅程", onClick = onStart)
@@ -62,25 +80,40 @@ fun WelcomeScreen(
                 }
             }
         }
-        item { SectionLabel("世界收藏 · 点击切换主题") }
-        item {
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(2),
-                modifier = Modifier.height(420.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                userScrollEnabled = false,
-            ) {
-                items(WorldPacks.all) { w ->
-                    WorldCard(w, selected = w.id == selectedId, onClick = { onSelectWorld(w.id) })
+
+        item { SectionLabel("世界收藏 · 点击切换主题（6）") }
+
+        items(rows.size) { index ->
+            val pair = rows[index]
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                val w0 = pair[0]
+                WorldCard(
+                    w = w0,
+                    selected = w0.id == selectedId,
+                    onClick = { onSelectWorld(w0.id) },
+                    modifier = Modifier.weight(1f),
+                )
+                if (pair.size > 1) {
+                    val w1 = pair[1]
+                    WorldCard(
+                        w = w1,
+                        selected = w1.id == selectedId,
+                        onClick = { onSelectWorld(w1.id) },
+                        modifier = Modifier.weight(1f),
+                    )
+                } else {
+                    Spacer(Modifier.weight(1f))
                 }
             }
         }
+
         item {
             LvjieCard(onClick = onStart) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     ListItem(
-                        icon = "💾", title = "继续上次", subtitle = "林逸 · ${pack.tiers.getOrElse(1) { "" }} · ${pack.places.firstOrNull()?.name ?: ""}",
+                        icon = "💾",
+                        title = "继续上次",
+                        subtitle = "林逸 · ${pack.tiers.getOrElse(1) { "" }} · ${pack.places.firstOrNull()?.name ?: ""}",
                         modifier = Modifier.weight(1f).background(c.surface),
                         trail = { LvjieChip("进入", selected = true) },
                         onClick = onStart,
@@ -88,6 +121,7 @@ fun WelcomeScreen(
                 }
             }
         }
+
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 LvjieButton("世界详情", onClick = onDetail, style = BtnStyle.Ghost, small = true)
@@ -95,33 +129,50 @@ fun WelcomeScreen(
                 LvjieButton("帮助", onClick = onHelp, style = BtnStyle.Ghost, small = true)
             }
         }
+
+        // 底部留出安全区，避免最后一项被手势条贴住
+        item { Spacer(Modifier.height(8.dp)) }
     }
 }
 
 @Composable
-private fun WorldCard(w: WorldPack, selected: Boolean, onClick: () -> Unit) {
+private fun WorldCard(
+    w: WorldPack,
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     val c = LocalLvjieColors.current
     Column(
-        modifier = Modifier
-            .fillMaxWidth()
+        modifier = modifier
             .clip(RoundedCornerShape(Radius.Lg))
             .background(if (selected) w.colors.soft else c.surface)
             .border(
-                if (selected) 1.5.dp else 1.dp,
-                if (selected) w.colors.accent else c.line,
-                RoundedCornerShape(Radius.Lg)
+                width = if (selected) 1.5.dp else 1.dp,
+                color = if (selected) w.colors.accent else c.line,
+                shape = RoundedCornerShape(Radius.Lg),
             )
             .clickable(onClick = onClick)
-            .padding(16.dp)
+            .padding(14.dp),
     ) {
         Box(
-            modifier = Modifier.size(44.dp).clip(RoundedCornerShape(15.dp)).background(w.colors.soft),
+            modifier = Modifier
+                .size(42.dp)
+                .clip(RoundedCornerShape(14.dp))
+                .background(w.colors.soft),
             contentAlignment = Alignment.Center,
-        ) { Text(w.icon, fontSize = 22.sp) }
+        ) {
+            Text(w.icon, fontSize = 21.sp)
+        }
         Spacer(Modifier.height(10.dp))
         Text(w.name, fontSize = 16.sp, fontWeight = FontWeight.Bold)
         Text(w.tagline, color = c.ink3, fontSize = 11.sp, maxLines = 1)
         Spacer(Modifier.height(8.dp))
-        Text("${w.level} · ${w.progress} · 6 阶", color = c.ink3, fontSize = 10.5.sp, fontWeight = FontWeight.SemiBold)
+        Text(
+            "${w.level} · ${w.progress} · 6 阶",
+            color = c.ink3,
+            fontSize = 10.5.sp,
+            fontWeight = FontWeight.SemiBold,
+        )
     }
 }
