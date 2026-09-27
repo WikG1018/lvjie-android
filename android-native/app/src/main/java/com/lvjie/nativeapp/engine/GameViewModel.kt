@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.lvjie.nativeapp.data.GlobalPrefs
+import com.lvjie.nativeapp.data.BigEvent
 import com.lvjie.nativeapp.data.PlayerState
 import com.lvjie.nativeapp.data.SampleContent
 import com.lvjie.nativeapp.data.SaveRepository
@@ -43,6 +44,8 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
     private val saves = SaveRepository(app)
     private val creds = CredentialsRepository(app)
     private val llm = LlmService()
+    val bgm = BgmPlayer(app)
+    private val appContext = app.applicationContext
 
     private val _state = MutableStateFlow(SampleContent.newGame("xiuxian"))
     val state: StateFlow<PlayerState> = _state.asStateFlow()
@@ -92,6 +95,7 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
                 _state.value = restored
                 _world.value = WorldPacks.byId(restored.worldId)
             }
+            syncBgm()
         }
     }
 
@@ -106,6 +110,17 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
         _event.value = null
         eventCount = 0
         persist()
+        syncBgm()
+    }
+
+    fun syncBgm() {
+        bgm.setEnabled(_state.value.bgm)
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        persist()
+        bgm.stop()
     }
 
     fun persist() {
@@ -139,8 +154,11 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun toggleBgm() {
-        _state.update { it.copy(bgm = !it.bgm) }
-        viewModelScope.launch { saves.setBgm(_state.value.bgm) }
+        val on = !_state.value.bgm
+        _state.update { it.copy(bgm = on) }
+        viewModelScope.launch { saves.setBgm(on) }
+        bgm.setEnabled(on)
+        pushFeedback(if (on) "背景音乐已开启" else "背景音乐已关闭")
         persist()
     }
 
@@ -252,6 +270,29 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
         _state.update { it.copy(lang = lang) }
         viewModelScope.launch { saves.setLang(lang) }
         persist()
+    }
+
+        /** 与 NPC 交谈：提升好感，必要时结识为同伴 */
+    fun talkWith(name: String) {
+        val s = _state.value
+        val existing = s.friends.indexOfFirst { it.name == name }
+        val updated = if (existing >= 0) {
+            val old = s.friends[existing]
+            val bumped = old.copy(favor = (old.favor + 3).coerceAtMost(100))
+            s.friends.toMutableList().also { it[existing] = bumped }
+        } else {
+            s.friends + com.lvjie.nativeapp.data.Friend(
+                name = name,
+                rel = "相识",
+                favor = 25,
+                at = _world.value.places.firstOrNull { it.id == s.loc }?.name ?: "",
+                intro = "在旅途中结识。",
+            )
+        }
+        _state.value = s.copy(friends = updated)
+        pushFeedback("与 $name 交好" + if (existing >= 0) " · 好感 +3" else " · 已结为同伴")
+        persist()
+        startEvent("talk", "与${name}交谈")
     }
 
     fun startEvent(actionId: String, custom: String? = null) {
@@ -385,10 +426,25 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
                     inv.toMutableList().also { it[idx] = old.copy(count = old.count + 1) }
                 } else inv + InventoryItem(item, "consumable", 1, "野外所得")
             }
+            // 任务推进：随机将一个 active 任务标记完成（20%）
+            val quests = if (ev.progressGain > 0 && s.quests.any { it.status == "active" } && (0..4).random() == 0) {
+                var done = false
+                s.quests.map { q ->
+                    if (!done && q.status == "active") {
+                        done = true
+                        q.copy(status = "done")
+                    } else q
+                }
+            } else s.quests
+
             s.copy(
                 progress = s.progress + ev.progressGain,
                 money = s.money + ev.moneyGain,
                 inventory = inv,
+                quests = quests,
+                events = if (ev.progressGain >= 20) {
+                    listOf(BigEvent("${s.age} 岁", ev.kind + " · " + ev.progressGain + "点")) + s.events
+                } else s.events,
             )
         }
         _event.value = null
