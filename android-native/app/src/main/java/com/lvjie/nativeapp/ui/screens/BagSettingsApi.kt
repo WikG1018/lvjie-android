@@ -183,12 +183,25 @@ private fun SettingRow(title: String, desc: String, trail: @Composable () -> Uni
 
 /** P04 API 设置 */
 @Composable
-fun ApiScreen(onBack: () -> Unit, onTest: () -> Unit) {
+fun ApiScreen(
+    config: com.lvjie.nativeapp.llm.LlmConfig,
+    models: List<String>,
+    onBack: () -> Unit,
+    onTest: () -> Unit,
+    onRefreshModels: () -> Unit,
+    onSave: (baseUrl: String, model: String, key: String, protocol: String) -> Unit,
+) {
     val c = LocalLvjieColors.current
-    var baseUrl by remember { mutableStateOf("https://api.example.com/v1") }
-    var model by remember { mutableStateOf("gpt-mini") }
-    var key by remember { mutableStateOf("sk-demo-key") }
-    var chat by remember { mutableStateOf(true) }
+    var baseUrl by remember { mutableStateOf(config.baseUrl) }
+    var model by remember { mutableStateOf(config.model) }
+    var key by remember { mutableStateOf(config.apiKey) }
+    var chat by remember { mutableStateOf(config.protocol == "chat") }
+    LaunchedEffect(config) {
+        baseUrl = config.baseUrl
+        model = config.model
+        key = config.apiKey
+        chat = config.protocol == "chat"
+    }
 
     LazyColumn(
         modifier = Modifier.fillMaxSize().padding(horizontal = 14.dp),
@@ -244,8 +257,13 @@ fun ApiScreen(onBack: () -> Unit, onTest: () -> Unit) {
                 Text("Keystore AES-256-GCM 加密保存；导出存档不含 Key。", color = c.ink3, fontSize = 11.sp)
                 Spacer(Modifier.height(12.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    LvjieButton("保存", onClick = { onSave(baseUrl, model, key, if (chat) "chat" else "response") }, small = true)
                     LvjieButton("测试连通", onClick = onTest, style = BtnStyle.Outline, small = true)
-                    LvjieButton("返回", onClick = onBack, style = BtnStyle.Ghost, small = true)
+                    LvjieButton("刷新模型", onClick = onRefreshModels, style = BtnStyle.Outline, small = true)
+                }
+                if (models.isNotEmpty()) {
+                    Spacer(Modifier.height(8.dp))
+                    Text("可用模型：" + models.take(6).joinToString(" / "), color = c.ink3, fontSize = 11.sp)
                 }
             }
         }
