@@ -35,13 +35,6 @@ class SaveRepository(private val context: Context) {
 
     val activeWorldId: Flow<String> = context.dataStore.data.map { it[Keys.activeWorld] ?: "xiuxian" }
 
-    fun saveFlow(worldId: String): Flow<PlayerState?> =
-        context.dataStore.data.map { prefs ->
-            prefs[Keys.save(worldId)]?.let {
-                runCatching { json.decodeFromString<PlayerState>(it) }.getOrNull()
-            }
-        }
-
     suspend fun writeSave(state: PlayerState) {
         context.dataStore.edit { prefs ->
             prefs[Keys.save(state.worldId)] = json.encodeToString(PlayerState.serializer(), state)
@@ -72,20 +65,40 @@ class SaveRepository(private val context: Context) {
                 saves[worldId] = st
             }
         }
-        return json.encodeToString(ExportMap.serializer(), ExportMap(saves))
+        val customs = _customPacks.value
+        return json.encodeToString(ExportMap.serializer(), ExportMap(saves, customs))
     }
 
     suspend fun importBundle(raw: String): Int {
-        val map = runCatching {
+        val bundle = runCatching {
             json.decodeFromString(ExportMap.serializer(), raw)
-        }.getOrNull()?.saves ?: return 0
-        if (map.isEmpty()) return 0
+        }.getOrNull()
+        if (bundle == null) return 0
+        // 以 st.worldId 为准写键，避免 key/worldId 脱钩
+        val valid = LinkedHashMap<String, PlayerState>()
+        for ((_, st) in bundle.saves) {
+            if (st.worldId.isNotBlank() && st.name.isNotBlank()) {
+                valid[st.worldId] = st
+            }
+        }
+        if (bundle.customPacks.isNotEmpty()) {
+            val next = (_customPacks.value.filter { old -> bundle.customPacks.none { it.id == old.id } }) + bundle.customPacks
+            _customPacks.value = next
+            bundle.customPacks.forEach { WorldPacks.registerCustom(it) }
+            context.dataStore.edit { prefs ->
+                prefs[Keys.customPacks] = json.encodeToString(
+                    kotlinx.serialization.builtins.ListSerializer(CustomPack.serializer()),
+                    next,
+                )
+            }
+        }
+        if (valid.isEmpty() && bundle.customPacks.isEmpty()) return 0
         context.dataStore.edit { prefs ->
-            for ((id, st) in map) {
+            for ((id, st) in valid) {
                 prefs[Keys.save(id)] = json.encodeToString(PlayerState.serializer(), st)
             }
         }
-        return map.size
+        return valid.size
     }
 
     // 自定义世界包
@@ -146,7 +159,7 @@ class SaveRepository(private val context: Context) {
 }
 
 @kotlinx.serialization.Serializable
-data class ExportMap(val saves: Map<String, PlayerState> = emptyMap())
+data class ExportMap(val saves: Map<String, PlayerState> = emptyMap(), val customPacks: List<CustomPack> = emptyList())
 
 @kotlinx.serialization.Serializable
 data class GlobalPrefs(
