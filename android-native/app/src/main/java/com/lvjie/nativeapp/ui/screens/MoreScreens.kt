@@ -26,7 +26,7 @@ import com.lvjie.nativeapp.ui.theme.Radius
 
 /** P02 世界详情 */
 @Composable
-fun DetailScreen(pack: WorldPack, onStart: () -> Unit) {
+fun DetailScreen(pack: WorldPack, onStart: () -> Unit, onNewGame: () -> Unit = onStart) {
     val c = LocalLvjieColors.current
     var tab by remember { mutableStateOf(0) }
     LazyColumn(
@@ -128,7 +128,7 @@ fun DetailScreen(pack: WorldPack, onStart: () -> Unit) {
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 LvjieButton("进入世界", onClick = onStart, modifier = Modifier.weight(1f))
-                LvjieButton("新开一局", onClick = onStart, style = BtnStyle.Outline, modifier = Modifier.weight(1f))
+                LvjieButton("新开一局", onClick = onNewGame, style = BtnStyle.Outline, modifier = Modifier.weight(1f))
             }
         }
     }
@@ -207,8 +207,8 @@ fun AuthorScreen(onSaved: (name: String, tagline: String, tiers: List<String>, p
                     Text("设定摘要", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = c.ink3)
                     Spacer(Modifier.height(6.dp))
                     OutlinedTextField(
-                        value = "凡人流修仙，资质平平的少年靠机缘与谋略步步登天。",
-                        onValueChange = {}, modifier = Modifier.fillMaxWidth().height(88.dp),
+                        value = waTag,
+                        onValueChange = { waTag = it }, modifier = Modifier.fillMaxWidth().height(88.dp),
                         shape = RoundedCornerShape(Radius.Md),
                     )
                     Spacer(Modifier.height(12.dp))
@@ -242,7 +242,7 @@ fun AuthorScreen(onSaved: (name: String, tagline: String, tiers: List<String>, p
                         Box(Modifier.size(7.dp).clip(CircleShape).background(c.world.accent))
                     }
                     Spacer(Modifier.height(8.dp))
-                    Text("凡人修仙 · 等级 6 阶 · 地点 8 个 · NPC 12 人", color = c.ink2, fontSize = 13.sp)
+                    Text("$waName · 等级 6 阶 · 地点 4 个 · ${waTag.take(20)}…", color = c.ink2, fontSize = 13.sp)
                     Spacer(Modifier.height(10.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         pack.tiers.forEach { LvjieChip(it) }
