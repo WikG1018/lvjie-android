@@ -63,10 +63,14 @@ class SaveRepository(private val context: Context) {
     suspend fun exportBundle(): String {
         val prefs = context.dataStore.data.first()
         val saves = LinkedHashMap<String, PlayerState>()
-        for (pack in WorldPacks.all) {
-            val raw = prefs[Keys.save(pack.id)] ?: continue
-            val st = runCatching { json.decodeFromString(PlayerState.serializer(), raw) }.getOrNull() ?: continue
-            saves[pack.id] = st
+        // 遍历所有 save_ 键（含自定义世界），保证导出/导入对称
+        prefs.asMap().keys.forEach { key ->
+            if (key.name.startsWith("save_")) {
+                val worldId = key.name.removePrefix("save_")
+                val raw = prefs[Keys.save(worldId)] ?: return@forEach
+                val st = runCatching { json.decodeFromString(PlayerState.serializer(), raw) }.getOrNull() ?: return@forEach
+                saves[worldId] = st
+            }
         }
         return json.encodeToString(ExportMap.serializer(), ExportMap(saves))
     }
