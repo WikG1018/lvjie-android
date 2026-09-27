@@ -141,6 +141,8 @@ fun AuthorScreen(onSaved: (name: String, tagline: String, tiers: List<String>, p
     var step by remember { mutableStateOf(1) }
     var waName by remember { mutableStateOf("凡人修仙传") }
     var waTag by remember { mutableStateOf("凡人流修仙，资质平平的少年靠机缘与谋略步步登天。") }
+    var source by remember { mutableStateOf("从作品生成") }
+    var hint by remember { mutableStateOf("") }
     val steps = listOf("来源", "设定", "生成", "微调")
 
     LazyColumn(
@@ -184,16 +186,28 @@ fun AuthorScreen(onSaved: (name: String, tagline: String, tiers: List<String>, p
                 }
             }
         }
-        item { SectionLabel("第 $step 步 / 共 4 步 · ${steps[step - 1]}") }
+        item { SectionLabel("第 $step 步 / 共 4 步 · ${steps[step - 1]}" + if (step >= 2) " · 来源：$source" else "") }
+        if (hint.isNotEmpty()) item { Text(hint, color = c.ink3, fontSize = 11.sp) }
 
         when (step) {
             1 -> items(listOf(
-                Triple("📚", "从作品生成", "书名 + 设定摘要"),
-                Triple("📄", "整本小说", "上传 TXT · 抽样考据"),
-                Triple("🌐", "联网补充设定", "百科 / 设定帖"),
-                Triple("🧩", "粘贴 JSON", "高级 · schema 校验"),
+                Triple("📚", "从作品生成", "书名 + 设定摘要 · 可用"),
+                Triple("📄", "整本小说", "粘贴文本摘要 · 可用"),
+                Triple("🌐", "联网补充设定", "填写设定关键词 · 可用"),
+                Triple("🧩", "粘贴 JSON", "导出包编辑后导入 · 见设置"),
             )) { (ic, t, d) ->
-                ListItem(icon = ic, title = t, subtitle = d, onClick = { step = 2 })
+                ListItem(
+                    icon = ic,
+                    title = t,
+                    subtitle = d,
+                    onClick = {
+                        source = t
+                        if (t.contains("JSON")) {
+                            hint = "请在「设置 → 导入存档」或粘贴 JSON 到下一步备注"
+                        }
+                        step = 2
+                    },
+                )
             }
             2 -> item {
                 LvjieCard {
