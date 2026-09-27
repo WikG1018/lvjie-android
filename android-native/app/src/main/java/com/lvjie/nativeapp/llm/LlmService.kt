@@ -2,6 +2,7 @@ package com.lvjie.nativeapp.llm
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.channels.trySendBlocking
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.flowOn
@@ -48,6 +49,7 @@ class LlmService(
                 .addHeader("Authorization", "Bearer ${cfg.apiKey}")
                 .get().build()
             http.newCall(req).execute().use { r ->
+                if (!r.isSuccessful) error("HTTP ${r.code}")
                 val body = r.body?.string() ?: "[]"
                 val el = json.parseToJsonElement(body)
                 val arr = when {
@@ -62,6 +64,7 @@ class LlmService(
 
     /** 流式增量文本 */
     fun stream(cfg: LlmConfig, system: String, user: String): Flow<String> = callbackFlow {
+        val channel = this
         val isResponse = cfg.protocol == "response"
         val path = if (isResponse) "/responses" else "/chat/completions"
         val payload = buildJsonObject {
@@ -107,7 +110,8 @@ class LlmService(
                             }
                             val piece = parseDelta(data, isResponse)
                             if (piece.isNotEmpty()) {
-                                trySend(piece)
+                                // 阻塞发送，避免慢消费者丢字
+                                channel.trySendBlocking(piece)
                             }
                         }
                         close()
