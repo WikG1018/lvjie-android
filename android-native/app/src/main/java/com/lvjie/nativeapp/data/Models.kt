@@ -95,6 +95,16 @@ data class WorldPack(
     val colors: WorldColors,
 )
 
+@kotlinx.serialization.Serializable
+data class CustomPack(
+    val id: String,
+    val name: String,
+    val tagline: String = "自定义世界观",
+    val tiers: List<String> = listOf("初", "中", "高"),
+    val placeNames: List<String> = listOf("起点"),
+    val createdAt: Long = System.currentTimeMillis(),
+)
+
 object WorldPacks {
     val tierReq = listOf(0, 120, 320, 700, 1400, 2500)
 
