@@ -3,41 +3,45 @@ package com.lvjie.nativeapp.engine
 import android.content.Context
 import android.media.AudioAttributes
 import android.media.MediaPlayer
-import com.lvjie.nativeapp.R
 
 /**
- * 背景音乐：内置 assets/bgm_ambient.wav 循环播放。
- * 开关跟随设置（PlayerState.bgm）。
+ * 背景音乐：assets/bgm_ambient.wav 循环播放。
+ * prepareAsync 避免主线程阻塞；异常时释放资源。
  */
 class BgmPlayer(private val context: Context) {
     private var player: MediaPlayer? = null
-    private var enabled = true
 
     @Synchronized
     fun play() {
-        enabled = true
         if (player != null) {
-            if (player?.isPlaying == false) runCatching { player?.start() }
+            runCatching { if (player?.isPlaying == false) player?.start() }
             return
         }
-        runCatching {
-            val afd = context.assets.openFd("bgm_ambient.wav")
-            player = MediaPlayer().apply {
-                setAudioAttributes(
-                    AudioAttributes.Builder()
-                        .setUsage(AudioAttributes.USAGE_GAME)
-                        .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
-                        .build()
-                )
-                setDataSource(afd.fileDescriptor, afd.startOffset, afd.length)
-                afd.close()
-                isLooping = true
-                setVolume(0.28f, 0.28f)
-                prepare()
-                start()
+        var afd: android.content.res.AssetFileDescriptor? = null
+        try {
+            afd = context.assets.openFd("bgm_ambient.wav")
+            val p = MediaPlayer()
+            player = p
+            p.setAudioAttributes(
+                AudioAttributes.Builder()
+                    .setUsage(AudioAttributes.USAGE_GAME)
+                    .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+                    .build()
+            )
+            p.setDataSource(afd.fileDescriptor, afd.startOffset, afd.length)
+            afd.close()
+            afd = null
+            p.isLooping = true
+            p.setVolume(0.28f, 0.28f)
+            p.setOnPreparedListener { mp -> runCatching { mp.start() } }
+            p.setOnErrorListener { _, _, _ ->
+                releaseInternal()
+                true
             }
-        }.onFailure {
-            player = null
+            p.prepareAsync()
+        } catch (e: Throwable) {
+            runCatching { afd?.close() }
+            releaseInternal()
         }
     }
 
@@ -48,16 +52,20 @@ class BgmPlayer(private val context: Context) {
 
     @Synchronized
     fun stop() {
-        runCatching {
-            player?.stop()
-            player?.release()
-        }
-        player = null
+        releaseInternal()
     }
 
     @Synchronized
     fun setEnabled(on: Boolean) {
         if (on) play() else pause()
+    }
+
+    private fun releaseInternal() {
+        try {
+            player?.release()
+        } catch (_: Throwable) {
+        }
+        player = null
     }
 
     val isPlaying: Boolean
