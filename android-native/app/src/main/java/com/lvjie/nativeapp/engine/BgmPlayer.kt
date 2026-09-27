@@ -60,6 +60,7 @@ class BgmPlayer(private val context: Context) {
         if (on) play() else pause()
     }
 
+    @Synchronized
     private fun releaseInternal() {
         try {
             player?.release()
