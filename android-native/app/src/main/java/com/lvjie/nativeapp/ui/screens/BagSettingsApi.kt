@@ -102,13 +102,18 @@ fun SettingsScreen(
     state: PlayerState,
     pack: WorldPack,
     onAiStyle: (String) -> Unit,
+    onLang: (String) -> Unit,
     onToggleLimit: () -> Unit,
     onToggleBgm: () -> Unit,
     onApi: () -> Unit,
     onExport: () -> Unit,
+    onImport: (String) -> Unit,
     onDelete: () -> Unit,
 ) {
     val c = LocalLvjieColors.current
+    var showImport by remember { mutableStateOf(false) }
+    var importText by remember { mutableStateOf("") }
+
     LazyColumn(
         modifier = Modifier.fillMaxSize().padding(horizontal = 14.dp),
         contentPadding = PaddingValues(vertical = 12.dp, horizontal = 2.dp),
@@ -131,6 +136,23 @@ fun SettingsScreen(
         }
         item {
             LvjieCard {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("剧情语言", fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                    Spacer(Modifier.width(8.dp))
+                    Box(Modifier.size(7.dp).clip(CircleShape).background(c.world.accent))
+                }
+                Spacer(Modifier.height(12.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    listOf("简体中文", "繁體中文", "English", "日本語").forEach { s ->
+                        LvjieButton(s, onClick = { onLang(s) }, style = if (state.lang == s) BtnStyle.Primary else BtnStyle.Ghost, small = true)
+                    }
+                }
+                Spacer(Modifier.height(8.dp))
+                Text("影响 UI 文案与 AI 叙事输出语言。", color = c.ink3, fontSize = 11.sp)
+            }
+        }
+        item {
+            LvjieCard {
                 SettingRow("对话轮数限制", "开启后单次事件约 10 轮收束") {
                     LvjieSwitch(state.dialogLimit, onToggleLimit)
                 }
@@ -138,14 +160,14 @@ fun SettingsScreen(
         }
         item {
             LvjieCard {
-                SettingRow("背景音乐", "内置曲目 · 自定义 mp3") {
+                SettingRow("背景音乐", "状态已保存；音频资源后续版本内置") {
                     LvjieSwitch(state.bgm, onToggleBgm)
                 }
             }
         }
         item {
             LvjieCard {
-                SettingRow("模型与 API", "chat 协议 · gpt-mini") {
+                SettingRow("模型与 API", "chat / response · 可配 Base URL 与 Key") {
                     LvjieButton("管理", onClick = onApi, style = BtnStyle.Outline, small = true)
                 }
             }
@@ -159,13 +181,44 @@ fun SettingsScreen(
                 }
                 Spacer(Modifier.height(12.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    LvjieButton("导出 JSON", onClick = onExport, style = BtnStyle.Outline, small = true)
+                    LvjieButton("导出分享", onClick = onExport, style = BtnStyle.Outline, small = true)
+                    LvjieButton("导入存档", onClick = { showImport = true }, style = BtnStyle.Outline, small = true)
                     LvjieButton("删除本世界", onClick = onDelete, style = BtnStyle.Danger, small = true)
                 }
                 Spacer(Modifier.height(8.dp))
-                Text("导出不含 API Key。删除只影响当前世界存档。", color = c.ink3, fontSize = 11.sp)
+                Text("导出为 JSON（不含 API Key），可分享或备份。删除只影响《${pack.name}》存档。", color = c.ink3, fontSize = 11.sp)
             }
         }
+    }
+
+    if (showImport) {
+        AlertDialog(
+            onDismissRequest = { showImport = false },
+            title = { Text("导入存档 JSON") },
+            text = {
+                Column {
+                    Text("粘贴导出的存档 JSON（支持全量或单份）。", fontSize = 12.sp, color = c.ink2)
+                    Spacer(Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = importText,
+                        onValueChange = { importText = it },
+                        modifier = Modifier.fillMaxWidth().height(140.dp),
+                        placeholder = { Text("{saves:{...}}", fontSize = 12.sp) },
+                        shape = RoundedCornerShape(Radius.Md),
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    showImport = false
+                    onImport(importText)
+                    importText = ""
+                }) { Text("导入") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showImport = false }) { Text("取消") }
+            },
+        )
     }
 }
 
@@ -263,7 +316,21 @@ fun ApiScreen(
                 }
                 if (models.isNotEmpty()) {
                     Spacer(Modifier.height(8.dp))
-                    Text("可用模型：" + models.take(6).joinToString(" / "), color = c.ink3, fontSize = 11.sp)
+                    Text("可用模型（点选填入）", color = c.ink3, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    Spacer(Modifier.height(6.dp))
+                    models.take(8).forEach { m ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { model = m }
+                                .padding(vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            LvjieChip(if (m == model) "✓ 当前" else "选用", selected = m == model)
+                            Spacer(Modifier.width(8.dp))
+                            Text(m, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                        }
+                    }
                 }
             }
         }
