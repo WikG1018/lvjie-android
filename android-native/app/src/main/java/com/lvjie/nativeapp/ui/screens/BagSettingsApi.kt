@@ -43,6 +43,9 @@ fun BagScreen(state: PlayerState, pack: WorldPack, onUseItem: (Int) -> Unit) {
             }
         }
         if (mode == "quests") {
+            if (state.quests.isEmpty()) {
+                item { EmptyState("📜", "暂无任务", "去场景里触发委托吧") }
+            }
             items(state.quests) { q ->
                 val tone = when (q.status) {
                     "active" -> ChipTone.Warning
@@ -60,6 +63,9 @@ fun BagScreen(state: PlayerState, pack: WorldPack, onUseItem: (Int) -> Unit) {
                 )
             }
         } else {
+            if (state.inventory.isEmpty()) {
+                item { EmptyState("🎒", "行囊为空", "搜寻或事件可获得物品") }
+            }
             items(state.inventory.size) { idx ->
                 val it = state.inventory[idx]
                 val icon = when (it.type) {
@@ -160,7 +166,7 @@ fun SettingsScreen(
         }
         item {
             LvjieCard {
-                SettingRow("背景音乐", "状态已保存；音频资源后续版本内置") {
+                SettingRow("背景音乐", "内置环境音乐，可随时开关") {
                     LvjieSwitch(state.bgm, onToggleBgm)
                 }
             }
@@ -240,8 +246,8 @@ fun ApiScreen(
     config: com.lvjie.nativeapp.llm.LlmConfig,
     models: List<String>,
     onBack: () -> Unit,
-    onTest: () -> Unit,
-    onRefreshModels: () -> Unit,
+    onTest: (baseUrl: String, model: String, key: String, protocol: String) -> Unit,
+    onRefreshModels: (baseUrl: String, model: String, key: String, protocol: String) -> Unit,
     onSave: (baseUrl: String, model: String, key: String, protocol: String) -> Unit,
 ) {
     val c = LocalLvjieColors.current
@@ -249,7 +255,7 @@ fun ApiScreen(
     var model by remember { mutableStateOf(config.model) }
     var key by remember { mutableStateOf(config.apiKey) }
     var chat by remember { mutableStateOf(config.protocol == "chat") }
-    LaunchedEffect(config) {
+    LaunchedEffect(Unit) {
         baseUrl = config.baseUrl
         model = config.model
         key = config.apiKey
@@ -311,8 +317,8 @@ fun ApiScreen(
                 Spacer(Modifier.height(12.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     LvjieButton("保存", onClick = { onSave(baseUrl, model, key, if (chat) "chat" else "response") }, small = true)
-                    LvjieButton("测试连通", onClick = onTest, style = BtnStyle.Outline, small = true)
-                    LvjieButton("刷新模型", onClick = onRefreshModels, style = BtnStyle.Outline, small = true)
+                    LvjieButton("测试连通", onClick = { onTest(baseUrl, model, key, if (chat) "chat" else "response") }, style = BtnStyle.Outline, small = true)
+                    LvjieButton("刷新模型", onClick = { onRefreshModels(baseUrl, model, key, if (chat) "chat" else "response") }, style = BtnStyle.Outline, small = true)
                 }
                 if (models.isNotEmpty()) {
                     Spacer(Modifier.height(8.dp))
