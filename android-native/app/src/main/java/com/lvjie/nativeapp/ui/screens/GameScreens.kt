@@ -39,6 +39,7 @@ fun SceneScreen(
     onOption: (Int) -> Unit,
     onEndEvent: () -> Unit,
     onFreeText: (String) -> Unit,
+    onHint: (String) -> Unit = {},
 ) {
     val c = LocalLvjieColors.current
     val place = pack.places.firstOrNull { it.id == state.loc } ?: pack.places.first()
@@ -78,9 +79,13 @@ fun SceneScreen(
                     onEnd = onEndEvent,
                     free = free,
                     onFreeChange = { free = it },
+                    enabled = !event.streaming,
                     onSend = {
-                        if (free.isNotBlank()) {
-                            onFreeText(free.trim())
+                        val text = free.trim()
+                        if (text.isEmpty()) {
+                            onHint("先输入要做的事")
+                        } else {
+                            onFreeText(text)
                             free = ""
                         }
                     },
@@ -132,6 +137,7 @@ private fun EventCard(
     onEnd: () -> Unit,
     free: String,
     onFreeChange: (String) -> Unit,
+    enabled: Boolean = true,
     onSend: () -> Unit,
 ) {
     val c = LocalLvjieColors.current
