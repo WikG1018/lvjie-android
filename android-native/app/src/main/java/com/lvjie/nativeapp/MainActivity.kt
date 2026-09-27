@@ -38,6 +38,8 @@ class MainActivity : ComponentActivity() {
             val event by vm.event.collectAsStateWithLifecycle()
             val feedback by vm.feedback.collectAsStateWithLifecycle()
             val breakthrough by vm.breakthrough.collectAsStateWithLifecycle()
+            val llmConfig by vm.llmConfig.collectAsStateWithLifecycle()
+            val models by vm.modelList.collectAsStateWithLifecycle()
 
             var screen by remember { mutableStateOf(AppScreen.Welcome) }
             var gameTab by remember { mutableStateOf(GameTab.Scene) }
@@ -51,6 +53,8 @@ class MainActivity : ComponentActivity() {
                     event = event,
                     feedback = feedback,
                     breakthrough = breakthrough,
+                    llmConfig = llmConfig,
+                    models = models,
                     onScreen = { screen = it },
                     onGameTab = { gameTab = it },
                     vm = vm,
@@ -71,6 +75,8 @@ fun AppRoot(
     event: com.lvjie.nativeapp.engine.EventUi?,
     feedback: com.lvjie.nativeapp.engine.Feedback?,
     breakthrough: String?,
+    llmConfig: com.lvjie.nativeapp.llm.LlmConfig,
+    models: List<String>,
     onScreen: (AppScreen) -> Unit,
     onGameTab: (GameTab) -> Unit,
     vm: GameViewModel,
@@ -118,8 +124,12 @@ fun AppRoot(
                 )
                 AppScreen.Author -> AuthorScreen()
                 AppScreen.Api -> ApiScreen(
+                    config = llmConfig,
+                    models = models,
                     onBack = { onScreen(AppScreen.Welcome) },
-                    onTest = { /* toast via feedback */ },
+                    onTest = { vm.testApi() },
+                    onRefreshModels = { vm.refreshModels() },
+                    onSave = { b, m, k, p -> vm.saveLlmConfig(b, m, k, p) },
                 )
                 AppScreen.Help -> HelpScreen()
                 AppScreen.Game -> when (gameTab) {
