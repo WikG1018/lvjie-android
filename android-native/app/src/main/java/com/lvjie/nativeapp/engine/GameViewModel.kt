@@ -19,6 +19,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -78,17 +79,15 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
             creds.configFlow.collect { _llmConfig.value = it }
         }
         viewModelScope.launch {
-            // 尝试读取上次存档
-            val active = saves.activeWorldId
-            var last: PlayerState? = null
-            active.collect { } // keep flow
-            WorldPacks.all.forEach { pack ->
-                val st = saves.readSave(pack.id)
-                if (st != null) last = st
-            }
-            last?.let { restore ->
-                _state.value = restore
-                _world.value = WorldPacks.byId(restore.worldId)
+            // 读取上次存档（activeWorldId 为 Flow，取一次即可）
+            val activeId = saves.activeWorldId
+                .first()
+                .ifBlank { "xiuxian" }
+            val restored = saves.readSave(activeId)
+                ?: WorldPacks.all.firstNotNullOfOrNull { saves.readSave(it.id) }
+            if (restored != null) {
+                _state.value = restored
+                _world.value = WorldPacks.byId(restored.worldId)
             }
         }
     }
