@@ -1,0 +1,7 @@
+
+# 构建本机路径与签名（不入库）
+local.properties
+*.keystore
+*.jks
+build/
+.gradle/
