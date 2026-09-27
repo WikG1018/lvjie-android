@@ -27,6 +27,7 @@ import com.lvjie.nativeapp.ui.theme.Radius
  */
 @Composable
 fun WelcomeScreen(
+    strings: com.lvjie.nativeapp.i18n.UiStrings = com.lvjie.nativeapp.i18n.I18n.of("简体中文"),
     selectedId: String,
     onSelectWorld: (String) -> Unit,
     onStart: () -> Unit,
@@ -81,8 +82,8 @@ fun WelcomeScreen(
                 )
                 Spacer(Modifier.height(12.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    LvjieButton("开始旅程", onClick = onStart)
-                    LvjieButton("🛠 自定义世界", onClick = onAuthor, style = BtnStyle.Outline)
+                    LvjieButton(strings.startJourney, onClick = onStart)
+                    LvjieButton("🛠 " + strings.customWorld, onClick = onAuthor, style = BtnStyle.Outline)
                 }
             }
         }
@@ -134,7 +135,7 @@ fun WelcomeScreen(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     ListItem(
                         icon = "💾",
-                        title = if (hasSave) "继续上次" else "暂无存档",
+                        title = if (hasSave) strings.continueLast else strings.noSave,
                         subtitle = if (hasSave) "$saveName · $saveLevel · $savePlace" else "点「开始旅程」创建角色",
                         modifier = Modifier.weight(1f).background(c.surface),
                         trail = { LvjieChip(if (hasSave) "继续" else "新档", selected = true) },
@@ -146,9 +147,9 @@ fun WelcomeScreen(
 
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                LvjieButton("世界详情", onClick = onDetail, style = BtnStyle.Ghost, small = true)
-                LvjieButton("API", onClick = onApi, style = BtnStyle.Ghost, small = true)
-                LvjieButton("帮助", onClick = onHelp, style = BtnStyle.Ghost, small = true)
+                LvjieButton(strings.worldDetail, onClick = onDetail, style = BtnStyle.Ghost, small = true)
+                LvjieButton(strings.api, onClick = onApi, style = BtnStyle.Ghost, small = true)
+                LvjieButton(strings.help, onClick = onHelp, style = BtnStyle.Ghost, small = true)
             }
         }
 
