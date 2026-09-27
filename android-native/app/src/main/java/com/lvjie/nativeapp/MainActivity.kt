@@ -46,6 +46,7 @@ class MainActivity : ComponentActivity() {
             val models by vm.modelList.collectAsStateWithLifecycle()
             val exportJson by vm.exportJson.collectAsStateWithLifecycle()
             val customPacks by vm.customPacks.collectAsStateWithLifecycle()
+            val hasSave by vm.hasSave.collectAsStateWithLifecycle()
 
             var screen by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(AppScreen.Welcome) }
             var gameTab by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(GameTab.Scene) }
@@ -83,6 +84,7 @@ class MainActivity : ComponentActivity() {
                     models = models,
                     exportJson = exportJson,
                     customPacks = customPacks,
+                    hasSave = hasSave,
                     onScreen = { screen = it },
                     onGameTab = { gameTab = it },
                     vm = vm,
@@ -107,6 +109,7 @@ fun AppRoot(
     models: List<String>,
     exportJson: String?,
     customPacks: List<com.lvjie.nativeapp.data.CustomPack>,
+    hasSave: Boolean,
     onScreen: (AppScreen) -> Unit,
     onGameTab: (GameTab) -> Unit,
     vm: GameViewModel,
@@ -114,6 +117,11 @@ fun AppRoot(
     val c = LocalLvjieColors.current
     var showDelete by remember { mutableStateOf(false) }
     var showExitConfirm by remember { mutableStateOf(false) }
+
+    androidx.activity.compose.BackHandler(enabled = true) {
+        if (screen == AppScreen.Game) showExitConfirm = true
+        else if (screen != AppScreen.Welcome) onScreen(AppScreen.Welcome)
+    }
 
     Box(Modifier.fillMaxSize()) {
     Scaffold(
@@ -149,7 +157,7 @@ fun AppRoot(
                         }
                     },
                     onStart = {
-                        vm.startOrContinue(pack.id)
+                        vm.startGame(pack.id, forceNew = true)
                         onScreen(AppScreen.Game)
                         onGameTab(GameTab.Scene)
                     },
@@ -168,12 +176,12 @@ fun AppRoot(
                     savePlace = runCatching {
                         pack.places.firstOrNull { it.id == state.loc }?.name ?: ""
                     }.getOrDefault(""),
-                    hasSave = state.name.isNotBlank(),
+                    hasSave = hasSave,
                 )
                 AppScreen.Detail -> DetailScreen(
                     pack = pack,
                     onStart = {
-                        vm.startOrContinue(pack.id)
+                        vm.startGame(pack.id, forceNew = true)
                         onScreen(AppScreen.Game)
                         onGameTab(GameTab.Scene)
                     },
