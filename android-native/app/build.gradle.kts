@@ -1,3 +1,4 @@
+import java.util.Properties
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -14,16 +15,24 @@ android {
         applicationId = "com.lvjie.nativeapp"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "1.0.0"
+        versionCode = 2
+        versionName = "1.0.1"
     }
 
     signingConfigs {
         create("release") {
-            storeFile = file("/Volumes/LANPO/mimo work/xiaoshuo/android-native/release.keystore")
-            storePassword = "lvjie123"
-            keyAlias = "lvjie"
-            keyPassword = "lvjie123"
+            // 从 local.properties / 环境变量读取，避免密码入库
+            val lp = rootProject.file("local.properties")
+            val props = Properties()
+            if (lp.exists()) lp.inputStream().use { props.load(it) }
+            fun prop(k: String, env: String): String =
+                (System.getenv(env) ?: props.getProperty(k) ?: "").trim()
+            storeFile = file(prop("storeFile", "LVJIE_STORE_FILE").ifEmpty {
+                rootProject.file("release.keystore").absolutePath
+            })
+            storePassword = prop("storePassword", "LVJIE_STORE_PASSWORD")
+            keyAlias = prop("keyAlias", "LVJIE_KEY_ALIAS").ifEmpty { "lvjie" }
+            keyPassword = prop("keyPassword", "LVJIE_KEY_PASSWORD").ifEmpty { storePassword }
         }
     }
     buildTypes {
