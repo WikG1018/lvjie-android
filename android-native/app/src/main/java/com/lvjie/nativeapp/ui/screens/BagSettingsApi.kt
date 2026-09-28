@@ -26,7 +26,7 @@ import com.lvjie.nativeapp.ui.theme.Radius
 
 /** P10/P11 囊务 = 任务 + 行囊 */
 @Composable
-fun BagScreen(state: PlayerState, pack: WorldPack, onUseItem: (Int) -> Unit) {
+fun BagScreen(strings: com.lvjie.nativeapp.i18n.UiStrings = com.lvjie.nativeapp.i18n.I18n.of("简体中文"), state: PlayerState, pack: WorldPack, onUseItem: (Int) -> Unit) {
     val c = LocalLvjieColors.current
     var mode by remember { mutableStateOf("quests") }
     val activeQuests = state.quests.count { it.status == "active" }
@@ -38,13 +38,13 @@ fun BagScreen(state: PlayerState, pack: WorldPack, onUseItem: (Int) -> Unit) {
     ) {
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                SegBtn("任务 $activeQuests", mode == "quests") { mode = "quests" }
-                SegBtn("行囊 ${state.inventory.size}", mode == "bag") { mode = "bag" }
+                SegBtn(strings.tasks + " " + activeQuests, mode == "quests") { mode = "quests" }
+                SegBtn(strings.inventory + " " + state.inventory.size, mode == "bag") { mode = "bag" }
             }
         }
         if (mode == "quests") {
             if (state.quests.isEmpty()) {
-                item { EmptyState("📜", "暂无任务", "去场景里触发委托吧") }
+                item { EmptyState("📜", strings.emptyTasks, strings.scene) }
             }
             items(state.quests) { q ->
                 val tone = when (q.status) {
@@ -53,18 +53,20 @@ fun BagScreen(state: PlayerState, pack: WorldPack, onUseItem: (Int) -> Unit) {
                     else -> ChipTone.Error
                 }
                 val label = when (q.status) {
-                    "active" -> "进行中"; "done" -> "已完成"; else -> "失败"
+                    "active" -> strings.questStatusActive
+                    "done" -> strings.questStatusDone
+                    else -> strings.questStatusFailed
                 }
                 ListItem(
                     icon = if (q.status == "done") "✅" else "📜",
                     title = q.title,
-                    subtitle = "委托人：${q.from} · ${q.desc}",
+                    subtitle = "${q.from} · ${q.desc}",
                     trail = { LvjieChip(label, tone = tone) },
                 )
             }
         } else {
             if (state.inventory.isEmpty()) {
-                item { EmptyState("🎒", "行囊为空", "搜寻或事件可获得物品") }
+                item { EmptyState("🎒", strings.emptyBag, strings.scene) }
             }
             items(state.inventory.size) { idx ->
                 val it = state.inventory[idx]
@@ -77,7 +79,7 @@ fun BagScreen(state: PlayerState, pack: WorldPack, onUseItem: (Int) -> Unit) {
                     subtitle = it.desc,
                     trail = {
                         if (it.type == "consumable") {
-                            LvjieButton("使用", onClick = { onUseItem(idx) }, style = BtnStyle.Tonal, small = true)
+                            LvjieButton(strings.use, onClick = { onUseItem(idx) }, style = BtnStyle.Tonal, small = true)
                         }
                     },
                 )
@@ -174,7 +176,7 @@ fun SettingsScreen(
         }
         item {
             LvjieCard {
-                SettingRow("模型与 API", "chat / response · 可配 Base URL 与 Key") {
+                SettingRow(strings.api, "chat / response · 可配 Base URL 与 Key") {
                     LvjieButton("管理", onClick = onApi, style = BtnStyle.Outline, small = true)
                 }
             }
@@ -182,7 +184,7 @@ fun SettingsScreen(
         item {
             LvjieCard {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("存档", fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                    Text(strings.inventory, fontSize = 15.sp, fontWeight = FontWeight.Bold)
                     Spacer(Modifier.width(8.dp))
                     Box(Modifier.size(7.dp).clip(CircleShape).background(c.world.accent))
                 }
@@ -201,10 +203,10 @@ fun SettingsScreen(
     if (showImport) {
         AlertDialog(
             onDismissRequest = { showImport = false },
-            title = { Text("导入存档 JSON") },
+            title = { Text(strings.importJson) },
             text = {
                 Column {
-                    Text("粘贴导出的存档 JSON（支持全量或单份）。", fontSize = 12.sp, color = c.ink2)
+                    Text(strings.importHint, fontSize = 12.sp, color = c.ink2)
                     Spacer(Modifier.height(8.dp))
                     OutlinedTextField(
                         value = importText,
@@ -220,10 +222,10 @@ fun SettingsScreen(
                     showImport = false
                     onImport(importText)
                     importText = ""
-                }) { Text("导入") }
+                }) { Text(strings.importBtn) }
             },
             dismissButton = {
-                TextButton(onClick = { showImport = false }) { Text("取消") }
+                TextButton(onClick = { showImport = false }) { Text(strings.cancel) }
             },
         )
     }
@@ -244,6 +246,7 @@ private fun SettingRow(title: String, desc: String, trail: @Composable () -> Uni
 /** P04 API 设置 */
 @Composable
 fun ApiScreen(
+    strings: com.lvjie.nativeapp.i18n.UiStrings = com.lvjie.nativeapp.i18n.I18n.of("简体中文"),
     config: com.lvjie.nativeapp.llm.LlmConfig,
     models: List<String>,
     onBack: () -> Unit,
@@ -272,7 +275,7 @@ fun ApiScreen(
         item {
             LvjieCard {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("协议", fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                    Text(strings.protocol, fontSize = 15.sp, fontWeight = FontWeight.Bold)
                     Spacer(Modifier.width(8.dp))
                     Box(Modifier.size(7.dp).clip(CircleShape).background(c.world.accent))
                 }
@@ -298,34 +301,34 @@ fun ApiScreen(
                 Spacer(Modifier.height(12.dp))
                 OutlinedTextField(
                     value = baseUrl, onValueChange = { baseUrl = it },
-                    label = { Text("Base URL") }, modifier = Modifier.fillMaxWidth(),
+                    label = { Text(strings.baseUrl) }, modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(Radius.Md), singleLine = true,
                 )
                 Spacer(Modifier.height(8.dp))
                 OutlinedTextField(
                     value = model, onValueChange = { model = it },
-                    label = { Text("模型名") }, modifier = Modifier.fillMaxWidth(),
+                    label = { Text(strings.modelName) }, modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(Radius.Md), singleLine = true,
                 )
                 Spacer(Modifier.height(8.dp))
                 OutlinedTextField(
                     value = key, onValueChange = { key = it },
-                    label = { Text("API Key") }, modifier = Modifier.fillMaxWidth(),
+                    label = { Text(strings.apiKey) }, modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(Radius.Md), singleLine = true,
                     visualTransformation = if (keyVisible) VisualTransformation.None else PasswordVisualTransformation(),
                     trailingIcon = {
                         TextButton(onClick = { keyVisible = !keyVisible }) {
-                            Text(if (keyVisible) "隐藏" else "显示", fontSize = 11.sp)
+                            Text(if (keyVisible) strings.hide else strings.show, fontSize = 11.sp)
                         }
                     },
                 )
                 Spacer(Modifier.height(6.dp))
-                Text("Keystore AES-256-GCM 加密保存；导出存档不含 Key。", color = c.ink3, fontSize = 11.sp)
+                Text(strings.keyHint, color = c.ink3, fontSize = 11.sp)
                 Spacer(Modifier.height(12.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    LvjieButton("保存", onClick = { onSave(baseUrl, model, key, if (chat) "chat" else "response") }, small = true)
-                    LvjieButton("测试连通", onClick = { onTest(baseUrl, model, key, if (chat) "chat" else "response") }, style = BtnStyle.Outline, small = true)
-                    LvjieButton("刷新模型", onClick = { onRefreshModels(baseUrl, model, key, if (chat) "chat" else "response") }, style = BtnStyle.Outline, small = true)
+                    LvjieButton(strings.save, onClick = { onSave(baseUrl, model, key, if (chat) "chat" else "response") }, small = true)
+                    LvjieButton(strings.test, onClick = { onTest(baseUrl, model, key, if (chat) "chat" else "response") }, style = BtnStyle.Outline, small = true)
+                    LvjieButton(strings.refreshModels, onClick = { onRefreshModels(baseUrl, model, key, if (chat) "chat" else "response") }, style = BtnStyle.Outline, small = true)
                 }
                 if (models.isNotEmpty()) {
                     Spacer(Modifier.height(8.dp))
