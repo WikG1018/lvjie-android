@@ -49,6 +49,8 @@ data class Friend(
     val favor: Int = 0,
     val at: String = "",
     val intro: String = "",
+    val married: Boolean = false,
+    val gender: String = "",
 )
 
 @Serializable
@@ -80,6 +82,7 @@ data class PlayerState(
     val lang: String = "简体中文",
     val bgm: Boolean = true,
     val dialogLimit: Boolean = true,
+    val marriagePref: String = "",
 )
 
 data class WorldPack(
@@ -99,6 +102,7 @@ data class WorldPack(
     val actions: List<ActionDef>,
     val startText: String,
     val colors: WorldColors,
+    val marriage: Boolean = true,
 )
 
 @kotlinx.serialization.Serializable
