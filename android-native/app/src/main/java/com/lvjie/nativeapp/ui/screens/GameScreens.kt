@@ -318,8 +318,24 @@ fun ProfileScreen(strings: com.lvjie.nativeapp.i18n.UiStrings = com.lvjie.native
         }
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                StatCell(pack.money, state.money.toString(), Modifier.weight(1f))
+                StatCell(pack.money.ifBlank { "币" }, state.money.toString(), Modifier.weight(1f))
                 StatCell(strings.companions, "${state.friends.size} 人", Modifier.weight(1f))
+            }
+        }
+        if (state.moneyMid > 0 || state.moneyHigh > 0 || state.moneyPeak > 0) {
+            item {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    StatCell(pack.moneyMid.ifBlank { "中" }, state.moneyMid.toString(), Modifier.weight(1f))
+                    StatCell(pack.moneyHigh.ifBlank { "高" }, state.moneyHigh.toString(), Modifier.weight(1f))
+                }
+            }
+        }
+        if (state.moneyPeak > 0) {
+            item {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    StatCell(pack.moneyPeak.ifBlank { "极品" }, state.moneyPeak.toString(), Modifier.weight(1f))
+                    StatCell(strings.level, pack.tiers.getOrElse(state.tierIndex) { "?" }, Modifier.weight(1f))
+                }
             }
         }
         item {
