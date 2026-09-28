@@ -44,7 +44,7 @@ fun SceneScreen(
 ) {
     val c = LocalLvjieColors.current
     val place = pack.places.firstOrNull { it.id == state.loc } ?: pack.places.first()
-    var free by remember { mutableStateOf("") }
+    var free by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf("") }
 
     LazyColumn(
         modifier = Modifier.fillMaxSize().padding(horizontal = 14.dp),
