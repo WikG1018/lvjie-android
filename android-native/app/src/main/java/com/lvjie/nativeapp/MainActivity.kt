@@ -185,6 +185,7 @@ fun AppRoot(
                         pack.places.firstOrNull { it.id == state.loc }?.name ?: ""
                     }.getOrDefault(""),
                     hasSave = hasSave,
+                    onDeleteCustom = { id -> vm.removeCustomPack(id) },
                 )
                 AppScreen.Detail -> DetailScreen(
                     strings = com.lvjie.nativeapp.i18n.I18n.of(state.lang),
