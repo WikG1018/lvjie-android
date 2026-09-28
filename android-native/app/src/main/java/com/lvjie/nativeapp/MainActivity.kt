@@ -121,6 +121,7 @@ fun AppRoot(
     vm: GameViewModel,
 ) {
     val c = LocalLvjieColors.current
+    val S = com.lvjie.nativeapp.i18n.I18n.of(state.lang)
     var showDelete by remember { mutableStateOf(false) }
     var showExitConfirm by remember { mutableStateOf(false) }
 
@@ -186,9 +187,10 @@ fun AppRoot(
                     hasSave = hasSave,
                 )
                 AppScreen.Detail -> DetailScreen(
+                    strings = com.lvjie.nativeapp.i18n.I18n.of(state.lang),
                     pack = pack,
                     onStart = {
-                        vm.startGame(pack.id, forceNew = true)
+                        vm.startOrContinue(pack.id)
                         onScreen(AppScreen.Game)
                         onGameTab(GameTab.Scene)
                     },
@@ -213,6 +215,7 @@ fun AppRoot(
                     },
                 )
                 AppScreen.Api -> ApiScreen(
+                    strings = com.lvjie.nativeapp.i18n.I18n.of(state.lang),
                     config = llmConfig,
                     models = models,
                     onBack = { onScreen(AppScreen.Welcome) },
@@ -229,6 +232,7 @@ fun AppRoot(
                 AppScreen.Help -> HelpScreen()
                 AppScreen.Game -> when (gameTab) {
                     GameTab.Scene -> SceneScreen(
+                        strings = com.lvjie.nativeapp.i18n.I18n.of(state.lang),
                         state = state, pack = pack, event = event,
                         onAction = { vm.startEvent(it) },
                         onTalk = { name -> vm.talkWith(name) },
@@ -237,10 +241,11 @@ fun AppRoot(
                         onFreeText = { vm.startEvent("travel", it) },
                         onHint = { msg -> vm.debugHint(msg) },
                     )
-                    GameTab.Map -> MapScreen(state, pack, onMove = { vm.moveTo(it) })
-                    GameTab.Profile -> ProfileScreen(state, pack, onBreakthrough = { vm.breakthrough() })
-                    GameTab.Bag -> BagScreen(state, pack, onUseItem = { vm.useItem(it) })
+                    GameTab.Map -> MapScreen(com.lvjie.nativeapp.i18n.I18n.of(state.lang), state, pack, onMove = { vm.moveTo(it) })
+                    GameTab.Profile -> ProfileScreen(com.lvjie.nativeapp.i18n.I18n.of(state.lang), state, pack, onBreakthrough = { vm.breakthrough() })
+                    GameTab.Bag -> BagScreen(com.lvjie.nativeapp.i18n.I18n.of(state.lang), state, pack, onUseItem = { vm.useItem(it) })
                     GameTab.Settings -> SettingsScreen(
+                        strings = com.lvjie.nativeapp.i18n.I18n.of(state.lang),
                         state = state, pack = pack,
                         onAiStyle = { vm.setAiStyle(it) },
                         onLang = { vm.setLang(it) },
@@ -333,17 +338,17 @@ fun AppRoot(
     if (showExitConfirm) {
         AlertDialog(
             onDismissRequest = { showExitConfirm = false },
-            title = { Text("返回世界列表？") },
-            text = { Text("存档会自动保存，可随时继续。") },
+            title = { Text(S.confirmExit) },
+            text = { Text(S.confirmExitBody) },
             confirmButton = {
                 TextButton(onClick = {
                     showExitConfirm = false
                     vm.persist()
                     onScreen(AppScreen.Welcome)
-                }) { Text("返回") }
+                }) { Text(S.back) }
             },
             dismissButton = {
-                TextButton(onClick = { showExitConfirm = false }) { Text("继续游戏") }
+                TextButton(onClick = { showExitConfirm = false }) { Text(S.keepPlaying) }
             },
         )
     }
@@ -351,18 +356,18 @@ fun AppRoot(
     if (showDelete) {
         AlertDialog(
             onDismissRequest = { showDelete = false },
-            title = { Text("删除本世界存档？") },
-            text = { Text("此操作不可恢复。其它世界与 API Key 不受影响。") },
+            title = { Text(S.deleteSaveTitle) },
+            text = { Text(S.deleteSaveBody) },
             confirmButton = {
                 TextButton(onClick = {
                     showDelete = false
                     vm.deleteCurrentSave {
                         onScreen(AppScreen.Welcome)
                     }
-                }) { Text("确认删除", color = c.error) }
+                }) { Text(S.confirmDelete, color = c.error) }
             },
             dismissButton = {
-                TextButton(onClick = { showDelete = false }) { Text("取消") }
+                TextButton(onClick = { showDelete = false }) { Text(S.cancel) }
             },
         )
     }
