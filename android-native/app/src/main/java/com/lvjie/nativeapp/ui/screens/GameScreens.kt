@@ -31,6 +31,7 @@ import com.lvjie.nativeapp.ui.theme.Radius
 /** P06 主场景 · 叙事 */
 @Composable
 fun SceneScreen(
+    strings: com.lvjie.nativeapp.i18n.UiStrings = com.lvjie.nativeapp.i18n.I18n.of("简体中文"),
     state: PlayerState,
     pack: WorldPack,
     event: EventUi?,
@@ -74,6 +75,7 @@ fun SceneScreen(
         if (event != null) {
             item {
                 EventCard(
+                    strings = strings,
                     event = event,
                     onOption = onOption,
                     onEnd = onEndEvent,
@@ -96,19 +98,19 @@ fun SceneScreen(
         item {
             LvjieCard {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("场景中的人", fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                    Text(strings.scenePeople, fontSize = 15.sp, fontWeight = FontWeight.Bold)
                     Spacer(Modifier.width(8.dp))
                     Box(Modifier.size(7.dp).clip(CircleShape).background(c.world.accent))
                 }
                 Spacer(Modifier.height(10.dp))
                 if (place.people.isEmpty()) {
-                    EmptyState("🍃", "此处暂无他人", "换一个行动或移动到别处")
+                    EmptyState("🍃", strings.noPeople, strings.noPeopleHint)
                 } else {
                     place.people.forEach { name ->
                         ListItem(
-                            icon = "👤", title = name, subtitle = "点击可交谈",
+                            icon = "👤", title = name, subtitle = strings.talk,
                             modifier = Modifier.padding(vertical = 4.dp),
-                            trail = { LvjieButton("交谈", onClick = { onTalk(name) }, style = BtnStyle.Tonal, small = true) },
+                            trail = { LvjieButton(strings.talk, onClick = { onTalk(name) }, style = BtnStyle.Tonal, small = true) },
                             onClick = { onTalk(name) },
                         )
                     }
@@ -132,6 +134,7 @@ fun SceneScreen(
 
 @Composable
 private fun EventCard(
+    strings: com.lvjie.nativeapp.i18n.UiStrings,
     event: EventUi,
     onOption: (Int) -> Unit,
     onEnd: () -> Unit,
@@ -151,12 +154,12 @@ private fun EventCard(
     ) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
             Text("${event.kind} · 第 ${event.count} 轮", color = c.world.accent, fontSize = 10.5.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.04f.sp)
-            LvjieButton("结束事件", onClick = onEnd, style = BtnStyle.Ghost, small = true)
+            LvjieButton(strings.endEvent, onClick = onEnd, style = BtnStyle.Ghost, small = true)
         }
         Spacer(Modifier.height(8.dp))
         if (event.loading && event.shownText.isEmpty()) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("正在生成", color = c.ink3, fontSize = 13.sp)
+                Text(strings.generating, color = c.ink3, fontSize = 13.sp)
                 Spacer(Modifier.width(8.dp))
                 Dots()
             }
@@ -191,7 +194,7 @@ private fun EventCard(
                 value = free,
                 onValueChange = onFreeChange,
                 modifier = Modifier.weight(1f).height(48.dp),
-                placeholder = { Text("描述你想做的事…", fontSize = 12.sp) },
+                placeholder = { Text(strings.freeInputHint, fontSize = 12.sp) },
                 singleLine = true,
                 shape = RoundedCornerShape(14.dp),
                 colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = c.world.accent, unfocusedBorderColor = c.line),
@@ -202,7 +205,7 @@ private fun EventCard(
                     .background(c.world.accent)
                     .clickable(onClick = onSend)
                     .padding(horizontal = 16.dp, vertical = 14.dp)
-            ) { Text("发送", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold) }
+            ) { Text(strings.send, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold) }
         }
     }
 }
@@ -233,12 +236,12 @@ fun reqFor(state: PlayerState): Int {
     return req.getOrElse(state.tierIndex + 1) { req.last() }
 }
 
-fun canBreak(state: PlayerState): Boolean =
-    state.tierIndex < 5 && state.progress >= reqFor(state)
+fun canBreak(state: PlayerState, pack: WorldPack): Boolean =
+    state.tierIndex < pack.tiers.lastIndex && state.progress >= reqFor(state)
 
 /** P07 地图 */
 @Composable
-fun MapScreen(state: PlayerState, pack: WorldPack, onMove: (String) -> Unit) {
+fun MapScreen(strings: com.lvjie.nativeapp.i18n.UiStrings = com.lvjie.nativeapp.i18n.I18n.of("简体中文"), state: PlayerState, pack: WorldPack, onMove: (String) -> Unit) {
     val c = LocalLvjieColors.current
     LazyColumn(
         modifier = Modifier.fillMaxSize().padding(horizontal = 14.dp),
@@ -251,7 +254,7 @@ fun MapScreen(state: PlayerState, pack: WorldPack, onMove: (String) -> Unit) {
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
-                        Text("当前 · ${pack.places.firstOrNull { it.id == state.loc }?.name ?: ""}", fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                        Text(strings.currentLocation + " · ${pack.places.firstOrNull { it.id == state.loc }?.name ?: ""}", fontSize = 15.sp, fontWeight = FontWeight.Bold)
                         Text("${pack.name}界 · ${pack.places.firstOrNull { it.id == state.loc }?.world ?: ""}", color = c.ink3, fontSize = 11.sp)
                     }
                 }
@@ -267,7 +270,7 @@ fun MapScreen(state: PlayerState, pack: WorldPack, onMove: (String) -> Unit) {
                 title = p.name + if (cur) " · 当前" else "",
                 subtitle = "${p.type} · " + if (p.people.isEmpty()) "无人" else "${p.people.size} 人",
                 modifier = if (cur) Modifier.border(1.5.dp, c.world.accent, RoundedCornerShape(Radius.Md)) else Modifier,
-                trail = { LvjieChip(if (cur) "在此" else "前往", selected = cur) },
+                trail = { LvjieChip(if (cur) strings.here else strings.go, selected = cur) },
                 onClick = if (cur) null else { { onMove(p.id) } },
             )
         }
@@ -276,9 +279,9 @@ fun MapScreen(state: PlayerState, pack: WorldPack, onMove: (String) -> Unit) {
 
 /** P08 人物 */
 @Composable
-fun ProfileScreen(state: PlayerState, pack: WorldPack, onBreakthrough: () -> Unit) {
+fun ProfileScreen(strings: com.lvjie.nativeapp.i18n.UiStrings = com.lvjie.nativeapp.i18n.I18n.of("简体中文"), state: PlayerState, pack: WorldPack, onBreakthrough: () -> Unit) {
     val c = LocalLvjieColors.current
-    val can = canBreak(state)
+    val can = canBreak(state, pack)
     LazyColumn(
         modifier = Modifier.fillMaxSize().padding(horizontal = 14.dp),
         contentPadding = PaddingValues(vertical = 12.dp, horizontal = 2.dp),
@@ -309,20 +312,20 @@ fun ProfileScreen(state: PlayerState, pack: WorldPack, onBreakthrough: () -> Uni
         }
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                StatCell("战力", state.power.toString(), Modifier.weight(1f))
-                StatCell("年龄", "${state.age} 岁", Modifier.weight(1f))
+                StatCell(strings.power, state.power.toString(), Modifier.weight(1f))
+                StatCell(strings.age, "${state.age} 岁", Modifier.weight(1f))
             }
         }
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 StatCell(pack.money, state.money.toString(), Modifier.weight(1f))
-                StatCell("同伴", "${state.friends.size} 人", Modifier.weight(1f))
+                StatCell(strings.companions, "${state.friends.size} 人", Modifier.weight(1f))
             }
         }
         item {
             LvjieCard {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("同伴", fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                    Text(strings.companions, fontSize = 15.sp, fontWeight = FontWeight.Bold)
                     Spacer(Modifier.width(8.dp))
                     Box(Modifier.size(7.dp).clip(CircleShape).background(c.world.accent))
                     Spacer(Modifier.weight(1f))
@@ -330,7 +333,7 @@ fun ProfileScreen(state: PlayerState, pack: WorldPack, onBreakthrough: () -> Uni
                 }
                 Spacer(Modifier.height(10.dp))
                 if (state.friends.isEmpty()) {
-                    EmptyState("🤝", "暂无同伴", "在场景中与人交谈可结识同伴")
+                    EmptyState("🤝", strings.emptyCompanions, strings.talk)
                 } else {
                     state.friends.forEach { f ->
                         ListItem(
@@ -346,13 +349,13 @@ fun ProfileScreen(state: PlayerState, pack: WorldPack, onBreakthrough: () -> Uni
         item {
             LvjieCard {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("重大经历", fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                    Text(strings.majorEvents, fontSize = 15.sp, fontWeight = FontWeight.Bold)
                     Spacer(Modifier.width(8.dp))
                     Box(Modifier.size(7.dp).clip(CircleShape).background(c.world.accent))
                 }
                 Spacer(Modifier.height(10.dp))
                 if (state.events.isEmpty()) {
-                    EmptyState("✦", "暂无经历", "行动后重大事件会记录在此")
+                    EmptyState("✦", strings.emptyEvents, strings.noEventsHint)
                 } else {
                     state.events.forEach { e ->
                         ListItem(icon = "✦", title = e.age, subtitle = e.text, modifier = Modifier.padding(vertical = 4.dp))
