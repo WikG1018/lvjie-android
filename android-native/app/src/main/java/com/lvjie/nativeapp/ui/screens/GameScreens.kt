@@ -279,7 +279,7 @@ fun MapScreen(strings: com.lvjie.nativeapp.i18n.UiStrings = com.lvjie.nativeapp.
 
 /** P08 人物 */
 @Composable
-fun ProfileScreen(strings: com.lvjie.nativeapp.i18n.UiStrings = com.lvjie.nativeapp.i18n.I18n.of("简体中文"), state: PlayerState, pack: WorldPack, onBreakthrough: () -> Unit) {
+fun ProfileScreen(strings: com.lvjie.nativeapp.i18n.UiStrings = com.lvjie.nativeapp.i18n.I18n.of("简体中文"), state: PlayerState, pack: WorldPack, onBreakthrough: () -> Unit, onPropose: (String) -> Unit = {}) {
     val c = LocalLvjieColors.current
     val can = canBreak(state, pack)
     LazyColumn(
@@ -353,10 +353,15 @@ fun ProfileScreen(strings: com.lvjie.nativeapp.i18n.UiStrings = com.lvjie.native
                 } else {
                     state.friends.forEach { f ->
                         ListItem(
-                            icon = "👤",
+                            icon = if (f.married) "💍" else "👤",
                             title = "${f.name} · ${f.rel}",
                             subtitle = "${f.at} · 好感 ${f.favor} · ${f.intro}",
                             modifier = Modifier.padding(vertical = 4.dp),
+                            trail = {
+                                if (!f.married && pack.marriage) {
+                                    LvjieButton("求婚", onClick = { onPropose(f.name) }, style = BtnStyle.Tonal, small = true)
+                                }
+                            },
                         )
                     }
                 }
