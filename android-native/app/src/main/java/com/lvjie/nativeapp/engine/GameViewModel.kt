@@ -594,7 +594,9 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
             if (text.isNotEmpty()) {
                 val lines = text.lines().map { it.trim() }
                 val optRe = Regex("""^\s*\d+[\.\uFF0E、\)）]\s*(.+)$""")
+                // 上游 v0.0.7.1：选项去掉重复序号，不再显示「1. 1.xxx」
                 val opts = lines.mapNotNull { line -> optRe.find(line.trim())?.groupValues?.getOrNull(1) }
+                    .map { s -> s.replace(Regex("""^\s*\d+[\.\uFF0E、\)）]\s*"""), "") }
                 val cleaned = lines.filterNot { optRe.matches(it.trim()) }.joinToString("\n")
                 _event.update {
                     it?.copy(
