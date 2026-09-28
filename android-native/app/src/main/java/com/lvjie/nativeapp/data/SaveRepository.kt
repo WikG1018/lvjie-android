@@ -98,7 +98,7 @@ class SaveRepository(private val context: Context) {
                 prefs[Keys.save(id)] = json.encodeToString(PlayerState.serializer(), st)
             }
         }
-        return valid.size
+        return valid.size + bundle.customPacks.size
     }
 
     // 自定义世界包
