@@ -252,7 +252,7 @@ fun AppRoot(
                         onHint = { msg -> vm.debugHint(msg) },
                     )
                     GameTab.Map -> MapScreen(com.lvjie.nativeapp.i18n.I18n.of(state.lang), state, pack, onMove = { vm.moveTo(it) })
-                    GameTab.Profile -> ProfileScreen(com.lvjie.nativeapp.i18n.I18n.of(state.lang), state, pack, onBreakthrough = { vm.breakthrough() })
+                    GameTab.Profile -> ProfileScreen(com.lvjie.nativeapp.i18n.I18n.of(state.lang), state, pack, onBreakthrough = { vm.breakthrough() }, onPropose = { vm.propose(it) })
                     GameTab.Bag -> BagScreen(com.lvjie.nativeapp.i18n.I18n.of(state.lang), state, pack, onUseItem = { vm.useItem(it) })
                     GameTab.Settings -> SettingsScreen(
                         strings = com.lvjie.nativeapp.i18n.I18n.of(state.lang),
@@ -329,9 +329,16 @@ fun AppRoot(
     val exportPayload = exportJson
     if (exportPayload != null) {
         LaunchedEffect(exportPayload) {
+            val file = java.io.File(context.cacheDir, "exports/lvjie-save.json")
+            file.parentFile?.mkdirs()
+            file.writeText(exportPayload)
+            val uri = androidx.core.content.FileProvider.getUriForFile(
+                context, "com.lvjie.nativeapp.fileprovider", file
+            )
             val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
                 type = "application/json"
-                putExtra(android.content.Intent.EXTRA_TEXT, exportPayload)
+                putExtra(android.content.Intent.EXTRA_STREAM, uri)
+                addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
             }
             val ok = runCatching {
                 context.startActivity(android.content.Intent.createChooser(intent, "分享存档 JSON"))
