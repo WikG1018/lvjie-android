@@ -208,6 +208,54 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
         persist()
     }
 
+    /** 扣款（最低档计，高抵低找零） */
+    fun spendMoney(cost: Int, reason: String = "付款"): Boolean {
+        val w = Money.of(_state.value)
+        val n = Money.spend(w, cost) ?: run {
+            pushFeedback("货币不足：$reason 需 $cost")
+            return false
+        }
+        _state.value = Money.apply(_state.value, n)
+        pushFeedback("$reason -$cost")
+        persist()
+        return true
+    }
+
+    /** 求婚：同场景、好感足够才成功（对齐上游婚姻语义） */
+    fun propose(name: String) {
+        if (!_world.value.marriage) {
+            pushFeedback("本世界未开启婚姻")
+            return
+        }
+        val s = _state.value
+        val idx = s.friends.indexOfFirst { it.name == name }
+        if (idx < 0) {
+            pushFeedback("先结识 $name")
+            return
+        }
+        val f = s.friends[idx]
+        if (f.married) {
+            pushFeedback("$name 已是伴侣")
+            return
+        }
+        val loc = _world.value.places.firstOrNull { it.id == s.loc }?.name ?: ""
+        if (f.at.isNotBlank() && f.at != loc) {
+            pushFeedback("需与 $name 同场景才能表白（当前在 $loc）")
+            return
+        }
+        if (f.favor < 60) {
+            pushFeedback("好感不足（${f.favor}/60），求婚被婉拒")
+            startEvent("talk", "向${name}表白但被婉拒")
+            return
+        }
+        val updated = s.friends.toMutableList()
+        updated[idx] = f.copy(married = true, rel = "伴侣", favor = (f.favor + 20).coerceAtMost(100))
+        _state.value = s.copy(friends = updated)
+        pushFeedback("求婚成功 · $name 成为伴侣")
+        startEvent("talk", "与${name}订下终身")
+        persist()
+    }
+
     fun useItem(index: Int) {
         var feedback: String? = null
         _state.update { s ->
