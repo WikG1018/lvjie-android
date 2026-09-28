@@ -29,7 +29,7 @@ fun LvjieButton(
     small: Boolean = false,
 ) {
     val c = LocalLvjieColors.current
-    val h = if (small) 32.dp else 44.dp
+    val h = if (small) 36.dp else 48.dp
     val bg = when {
         !enabled -> c.surface3
         style == BtnStyle.Primary -> c.world.accent
@@ -205,19 +205,25 @@ fun LvjieSwitch(on: Boolean, onToggle: () -> Unit, modifier: Modifier = Modifier
     val c = LocalLvjieColors.current
     Box(
         modifier = modifier
-            .size(width = 48.dp, height = 28.dp)
-            .clip(CircleShape)
-            .background(if (on) c.world.accent else c.ink4)
+            .size(width = 52.dp, height = 48.dp)
             .clickable(onClick = onToggle),
+        contentAlignment = Alignment.Center,
     ) {
         Box(
             modifier = Modifier
-                .align(Alignment.CenterStart)
-                .padding(start = if (on) 22.dp else 3.dp)
-                .size(22.dp)
+                .size(width = 48.dp, height = 28.dp)
                 .clip(CircleShape)
-                .background(Color.White)
-        )
+                .background(if (on) c.world.accent else c.ink4),
+        ) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.CenterStart)
+                    .padding(start = if (on) 22.dp else 3.dp)
+                    .size(22.dp)
+                    .clip(CircleShape)
+                    .background(Color.White)
+            )
+        }
     }
 }
 
