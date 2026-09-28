@@ -147,8 +147,8 @@ fun AuthorScreen(
 ) {
     val c = LocalLvjieColors.current
     var step by remember { mutableStateOf(1) }
-    var waName by remember { mutableStateOf("凡人修仙传") }
-    var waTag by remember { mutableStateOf("凡人流修仙，资质平平的少年靠机缘与谋略步步登天。") }
+    var waName by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf("凡人修仙传") }
+    var waTag by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf("凡人流修仙，资质平平的少年靠机缘与谋略步步登天。") }
     var source by remember { mutableStateOf("从作品生成") }
     var hint by remember { mutableStateOf("") }
     val steps = listOf("来源", "设定", "生成", "微调")
