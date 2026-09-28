@@ -79,6 +79,7 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
     private var streamJob: Job? = null
     private var loadJob: Job? = null
     private var eventCount = 0
+    private var eventRounds = 0
 
     init {
         viewModelScope.launch {
@@ -116,7 +117,10 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
         }
         val pack = WorldPacks.byId(worldId)
         _world.value = pack
-        _state.value = SampleContent.newGame(worldId, name)
+        _state.value = SampleContent.newGame(worldId, name).let { base ->
+            val g = _globalPrefs.value
+            base.copy(name = name.ifBlank { base.name }, lang = g.lang, aiStyle = g.aiStyle, bgm = g.bgm, dialogLimit = g.dialogLimit)
+        }
         _event.value = null
         eventCount = 0
         persist()
@@ -325,14 +329,14 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
         val id = _state.value.worldId
         viewModelScope.launch {
             saves.deleteSave(id)
-            // 写入该世界默认档，避免启动时恢复到其它世界
-            val fallback = SampleContent.newGame(id)
-            saves.writeSave(fallback)
-            _state.value = fallback
+            _hasSave.value = false
             _event.value = null
             eventCount = 0
-            _hasSave.value = true
-            pushFeedback("《${_world.value.name}》已重置为初始存档")
+            eventRounds = 0
+            // 保留世界主题，但标记无存档；内存态换为未保存演示态不落盘
+            val demo = SampleContent.newGame(id)
+            _state.value = demo
+            pushFeedback("《${_world.value.name}》存档已删除")
             onDone?.invoke()
         }
     }
@@ -475,8 +479,12 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
             pushFeedback("事件生成中，请稍候")
             return
         }
+        if (cur != null) {
+            settleCurrentEventGains(cur)
+        }
         val pack = _world.value
         eventCount += 1
+        eventRounds += 1
         val kind = custom?.let { "自由行动" }
             ?: pack.actions.firstOrNull { it.id == actionId }?.label
             ?: "事件"
@@ -571,6 +579,7 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
                 pushFeedback("LLM 不可用，已切换本地剧情")
             }
             if (failed) return@launch
+            enforceDialogLimit()
 
             // 完成后解析选项
             val text = buf.toString()
@@ -627,8 +636,18 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     private fun maybeForceEnd() {
-        if (_state.value.dialogLimit && eventCount > 0 && eventCount % 10 == 0) {
-            pushFeedback("已达约 10 轮，建议结束事件收束剧情")
+        if (!_state.value.dialogLimit) return
+        if (eventRounds in 1..Int.MAX_VALUE && eventRounds % 10 == 0 && eventRounds > 0) {
+            pushFeedback("已达约 10 轮，自动收束事件")
+            // 下一轮开始前收束
+        }
+    }
+
+    /** 单事件超过 10 轮强制收束 */
+    private fun enforceDialogLimit() {
+        if (_state.value.dialogLimit && eventRounds >= 10) {
+            pushFeedback("已到 10 轮上限，自动结束事件")
+            endEvent()
         }
     }
 
@@ -636,6 +655,7 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
         val ev = _event.value ?: return
         streamJob?.cancel()
         streamJob = null
+        eventRounds = 0
         var itemAdded = false
         _state.update { s ->
             var inv = s.inventory
