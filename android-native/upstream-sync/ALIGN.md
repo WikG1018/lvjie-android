@@ -22,3 +22,9 @@
 ## 策略
 - 不向原仓库推 PR；独立演进
 - 重大玩法变更以本表登记，便于持续对齐
+
+## v1.5.1 追加对齐
+- 货币高抵低找零 Money.spend
+- 婚姻：好感≥60 同场景求婚，成功为伴侣
+- FileProvider 文件分享存档 JSON
+- release minify + shrinkResources
