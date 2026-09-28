@@ -44,7 +44,7 @@ fun BagScreen(strings: com.lvjie.nativeapp.i18n.UiStrings = com.lvjie.nativeapp.
         }
         if (mode == "quests") {
             if (state.quests.isEmpty()) {
-                item { EmptyState("📜", strings.emptyTasks, strings.scene) }
+                item { EmptyState("📜", strings.emptyTasks, strings.tasks) }
             }
             items(state.quests) { q ->
                 val tone = when (q.status) {
@@ -66,7 +66,7 @@ fun BagScreen(strings: com.lvjie.nativeapp.i18n.UiStrings = com.lvjie.nativeapp.
             }
         } else {
             if (state.inventory.isEmpty()) {
-                item { EmptyState("🎒", strings.emptyBag, strings.scene) }
+                item { EmptyState("🎒", strings.emptyBag, strings.inventory) }
             }
             items(state.inventory.size) { idx ->
                 val it = state.inventory[idx]
