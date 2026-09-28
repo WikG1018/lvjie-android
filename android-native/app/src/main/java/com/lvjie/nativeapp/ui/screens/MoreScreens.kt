@@ -26,7 +26,7 @@ import com.lvjie.nativeapp.ui.theme.Radius
 
 /** P02 世界详情 */
 @Composable
-fun DetailScreen(pack: WorldPack, onStart: () -> Unit, onNewGame: () -> Unit = onStart) {
+fun DetailScreen(strings: com.lvjie.nativeapp.i18n.UiStrings = com.lvjie.nativeapp.i18n.I18n.of("简体中文"), pack: WorldPack, onStart: () -> Unit, onNewGame: () -> Unit = onStart) {
     val c = LocalLvjieColors.current
     var tab by remember { mutableStateOf(0) }
     LazyColumn(
@@ -51,7 +51,7 @@ fun DetailScreen(pack: WorldPack, onStart: () -> Unit, onNewGame: () -> Unit = o
         }
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                listOf("介绍", "等级表", "地图").forEachIndexed { i, t ->
+                listOf(strings.introTab, strings.tiersTab, strings.mapTab).forEachIndexed { i, t ->
                     LvjieButton(t, onClick = { tab = i }, style = if (tab == i) BtnStyle.Primary else BtnStyle.Ghost, small = true)
                 }
             }
@@ -60,7 +60,7 @@ fun DetailScreen(pack: WorldPack, onStart: () -> Unit, onNewGame: () -> Unit = o
             item {
                 LvjieCard {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("这个世界怎么玩", fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                        Text(strings.howToPlay, fontSize = 15.sp, fontWeight = FontWeight.Bold)
                         Spacer(Modifier.width(8.dp))
                         Box(Modifier.size(7.dp).clip(CircleShape).background(c.world.accent))
                     }
@@ -70,7 +70,7 @@ fun DetailScreen(pack: WorldPack, onStart: () -> Unit, onNewGame: () -> Unit = o
                         color = c.ink2, fontSize = 13.sp, lineHeight = 22.sp,
                     )
                     Spacer(Modifier.height(12.dp))
-                    Text("主题标语", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = c.ink3)
+                    Text(strings.themeLine, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = c.ink3)
                     Text(pack.tagline, color = c.ink2, fontSize = 13.sp)
                 }
             }
@@ -79,7 +79,7 @@ fun DetailScreen(pack: WorldPack, onStart: () -> Unit, onNewGame: () -> Unit = o
             item {
                 LvjieCard {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("等级表 · 6 阶", fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                        Text(strings.tierTable, fontSize = 15.sp, fontWeight = FontWeight.Bold)
                         Spacer(Modifier.width(8.dp))
                         Box(Modifier.size(7.dp).clip(CircleShape).background(c.world.accent))
                     }
@@ -109,7 +109,7 @@ fun DetailScreen(pack: WorldPack, onStart: () -> Unit, onNewGame: () -> Unit = o
             item {
                 LvjieCard {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("地点预览 · ${pack.places.size}", fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                        Text(strings.placePreview + " · ${pack.places.size}", fontSize = 15.sp, fontWeight = FontWeight.Bold)
                         Spacer(Modifier.width(8.dp))
                         Box(Modifier.size(7.dp).clip(CircleShape).background(c.world.accent))
                     }
@@ -127,8 +127,8 @@ fun DetailScreen(pack: WorldPack, onStart: () -> Unit, onNewGame: () -> Unit = o
         }
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                LvjieButton("进入世界", onClick = onStart, modifier = Modifier.weight(1f))
-                LvjieButton("新开一局", onClick = onNewGame, style = BtnStyle.Outline, modifier = Modifier.weight(1f))
+                LvjieButton(strings.enterWorld, onClick = onStart, modifier = Modifier.weight(1f))
+                LvjieButton(strings.openNew, onClick = onNewGame, style = BtnStyle.Outline, modifier = Modifier.weight(1f))
             }
         }
     }
@@ -281,7 +281,7 @@ fun AuthorScreen(
                     Text(draftName.ifBlank { waName } + " · 等级 " + (draftTiers.size.takeIf { it > 0 } ?: 6) + " 阶 · 地点 " + (draftPlaces.size.takeIf { it > 0 } ?: 4) + " 个", color = c.ink2, fontSize = 13.sp)
                     Spacer(Modifier.height(10.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        pack.tiers.forEach { LvjieChip(it) }
+                        (if (draftTiers.size >= 2) draftTiers else listOf("初阶","入门","精通","大成","化境","登峰")).forEach { LvjieChip(it) }
                     }
                     Spacer(Modifier.height(12.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -302,7 +302,7 @@ fun AuthorScreen(
     }
 }
 
-private val pack get() = WorldPacks.all.first()
+private val samplePack get() = com.lvjie.nativeapp.data.WorldPacks.all.first()
 
 /** P05 帮助 */
 @Composable
