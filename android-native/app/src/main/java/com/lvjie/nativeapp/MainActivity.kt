@@ -98,6 +98,15 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+fun buildMoneyLine(state: com.lvjie.nativeapp.data.PlayerState, pack: com.lvjie.nativeapp.data.WorldPack): String {
+    val parts = mutableListOf<String>()
+    parts += "${state.money} ${pack.money.ifBlank { "币" }}"
+    if (state.moneyMid > 0 || state.moneyHigh > 0 || state.moneyPeak > 0) parts += "${state.moneyMid} ${pack.moneyMid.ifBlank { "中" }}"
+    if (state.moneyHigh > 0 || state.moneyPeak > 0) parts += "${state.moneyHigh} ${pack.moneyHigh.ifBlank { "高" }}"
+    if (state.moneyPeak > 0) parts += "${state.moneyPeak} ${pack.moneyPeak.ifBlank { "极品" }}"
+    return parts.joinToString(" ")
+}
+
 enum class AppScreen { Welcome, Detail, Author, Api, Help, Game }
 
 @Composable
@@ -422,7 +431,7 @@ private fun TopBar(
         if (screen == AppScreen.Game) {
             Surface(color = c.surface, shape = CircleShape) {
                 Text(
-                    "${state.money} ${pack.money}",
+                    buildMoneyLine(state, pack),
                     fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = c.ink2,
                     modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
                 )
