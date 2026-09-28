@@ -37,6 +37,7 @@ fun WelcomeScreen(
     onApi: () -> Unit,
     onHelp: () -> Unit,
     customPacks: List<com.lvjie.nativeapp.data.CustomPack> = emptyList(),
+    onDeleteCustom: (String) -> Unit = {},
     saveName: String = "",
     saveLevel: String = "",
     savePlace: String = "",
@@ -123,7 +124,13 @@ fun WelcomeScreen(
                         icon = "🛠",
                         title = cp.name,
                         subtitle = "${cp.tagline.take(18)} · ${cp.tiers.size} 阶 · ${cp.placeNames.size} 地点",
-                        trail = { LvjieChip(if (selectedId == cp.id) "已选" else "选用", selected = selectedId == cp.id) },
+                        trail = {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                LvjieChip(if (selectedId == cp.id) "已选" else "选用", selected = selectedId == cp.id)
+                                Spacer(Modifier.width(6.dp))
+                                Text("×", color = c.ink3, fontSize = 16.sp, modifier = Modifier.clickable { onDeleteCustom(cp.id) })
+                            }
+                        },
                         onClick = { onSelectWorld(cp.id) },
                     )
                 }
