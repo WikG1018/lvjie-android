@@ -422,6 +422,14 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
 
     fun clearDraft() { _draft.value = null; _draftProgress.value = 0f }
 
+    fun removeCustomPack(id: String) {
+        viewModelScope.launch {
+            saves.deleteCustomPack(id)
+            com.lvjie.nativeapp.data.WorldPacks.unregisterCustom(id)
+            pushFeedback("自定义世界已删除")
+        }
+    }
+
     fun saveCustomPack(id: String, name: String, tagline: String, tiers: List<String>, placeNames: List<String>) {
         val safeTiers = tiers.filter { it.isNotBlank() }.ifEmpty { listOf("初期", "中期", "后期") }
         val safePlaces = placeNames.filter { it.isNotBlank() }.ifEmpty { listOf("起点") }
