@@ -65,6 +65,9 @@ data class PlayerState(
     val sub: Int = 1,
     val progress: Int = 310,
     val money: Int = 320,
+    val moneyMid: Int = 0,
+    val moneyHigh: Int = 0,
+    val moneyPeak: Int = 0,
     val power: Int = 966,
     val age: Int = 12,
     val lifespan: Int = 100,
@@ -87,6 +90,9 @@ data class WorldPack(
     val level: String,
     val progress: String,
     val money: String,
+    val moneyMid: String = "",
+    val moneyHigh: String = "",
+    val moneyPeak: String = "",
     val advance: String,
     val tiers: List<String>,
     val places: List<Place>,
@@ -111,7 +117,7 @@ object WorldPacks {
     val all: List<WorldPack> = listOf(
         WorldPack(
             id = "xiuxian", name = "修仙", icon = "🏔", tagline = "逆天改命，证道长生",
-            level = "境界", progress = "修为", money = "灵石", advance = "突破",
+            level = "境界", progress = "修为", money = "灵晶", moneyMid = "中品灵石", moneyHigh = "上品灵石", moneyPeak = "极品灵石", advance = "突破",
             tiers = listOf("练气", "筑基", "金丹", "元婴", "化神", "渡劫"),
             colors = WorldPalettes.Xiuxian,
             places = listOf(
@@ -131,7 +137,7 @@ object WorldPacks {
         ),
         WorldPack(
             id = "xuanhuan", name = "玄幻", icon = "🌌", tagline = "破境称尊，执掌苍穹",
-            level = "实力", progress = "灵力", money = "金币", advance = "破境",
+            level = "实力", progress = "灵力", money = "灵石", moneyMid = "中品灵石", moneyHigh = "上品灵石", moneyPeak = "极品灵石", advance = "破境",
             tiers = listOf("凡境", "灵境", "王境", "皇境", "帝境", "神境"),
             colors = WorldPalettes.Xuanhuan,
             places = listOf(
@@ -150,7 +156,7 @@ object WorldPacks {
         ),
         WorldPack(
             id = "wuxia", name = "武侠", icon = "⚔", tagline = "快意恩仇，仗剑天涯",
-            level = "修为", progress = "内力", money = "银两", advance = "精进",
+            level = "修为", progress = "内力", money = "铜钱", moneyMid = "银两", moneyHigh = "黄金", moneyPeak = "奇珍", advance = "精进",
             tiers = listOf("初窥", "小成", "大成", "宗师", "大宗师", "绝顶"),
             colors = WorldPalettes.Wuxia,
             places = listOf(
@@ -169,7 +175,7 @@ object WorldPacks {
         ),
         WorldPack(
             id = "urban", name = "职场", icon = "💼", tagline = "步步高升，掌控风云",
-            level = "职级", progress = "声望", money = "薪资", advance = "晋升",
+            level = "职级", progress = "声望", money = "元", moneyMid = "百元券", moneyHigh = "千元券", moneyPeak = "稀有藏品", advance = "晋升",
             tiers = listOf("实习生", "专员", "经理", "总监", "VP", "合伙人"),
             colors = WorldPalettes.Urban,
             places = listOf(
@@ -188,7 +194,7 @@ object WorldPacks {
         ),
         WorldPack(
             id = "apocalypse", name = "末世", icon = "🧟", tagline = "废土求生，进化称王",
-            level = "进化", progress = "进化点", money = "物资", advance = "进化",
+            level = "进化", progress = "进化点", money = "物资", moneyMid = "精制物资", moneyHigh = "稀有物资", moneyPeak = "传说物资", advance = "进化",
             tiers = listOf("幸存者", "觉醒者", "强化者", "超凡者", "领主", "王者"),
             colors = WorldPalettes.Apocalypse,
             places = listOf(
@@ -207,7 +213,7 @@ object WorldPacks {
         ),
         WorldPack(
             id = "western", name = "西幻", icon = "🛡", tagline = "魔法与剑，荣耀之路",
-            level = "位阶", progress = "魔力", money = "金币", advance = "晋阶",
+            level = "位阶", progress = "魔力", money = "铜币", moneyMid = "银币", moneyHigh = "金币", moneyPeak = "龙晶", advance = "晋阶",
             tiers = listOf("学徒", "骑士", "精英", "大师", "传奇", "神话"),
             colors = WorldPalettes.Western,
             places = listOf(
@@ -256,6 +262,9 @@ object WorldPacks {
             level = "等级",
             progress = "进度",
             money = "金币",
+            moneyMid = "银币",
+            moneyHigh = "晶石",
+            moneyPeak = "传世",
             advance = "晋阶",
             tiers = if (cp.tiers.isEmpty()) listOf("初", "中", "高") else cp.tiers,
             places = if (places.isEmpty()) listOf(Place("c0", "起点", "地点", cp.name, "旅程的起点。")) else places,
@@ -326,6 +335,9 @@ object SampleContent {
             sub = 1,
             progress = 310,
             money = 320,
+            moneyMid = 1,
+            moneyHigh = 0,
+            moneyPeak = 0,
             power = 966,
             age = 12,
             lifespan = 100,
