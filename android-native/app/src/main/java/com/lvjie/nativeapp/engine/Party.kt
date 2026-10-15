@@ -51,4 +51,40 @@ object Party {
         )
         return updated to "与 $name 切磋，好感 +2"
     }
+
+    /** 游戏天：30 天为一天。调用方传 ageDays/30，不要用壁钟。 */
+    fun dayKey(ageDays: Int): Long = ageDays.toLong() / 30L
+
+    fun teamPower(playerPower: Int, friends: List<Friend>): Int {
+        var total = 0L
+        if (playerPower > 0) total += playerPower
+        for (friend in friends) {
+            if (friend.traveling && friend.power > 0) total += friend.power
+        }
+        return total.coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
+    }
+
+    /** returnHome 且 origin 非空则送回原处，否则留在当前地点。 */
+    fun endTravel(friends: List<Friend>, name: String, here: String, returnHome: Boolean): List<Friend> {
+        return friends.map { friend ->
+            if (friend.name != name || !friend.traveling) friend else finishTravel(friend, here, returnHome)
+        }
+    }
+
+    fun dismissAll(friends: List<Friend>, here: String, returnHome: Boolean): List<Friend> {
+        return friends.map { friend ->
+            if (!friend.traveling) friend else finishTravel(friend, here, returnHome)
+        }
+    }
+
+    private fun finishTravel(friend: Friend, here: String, returnHome: Boolean): Friend {
+        val back = returnHome && friend.origin.isNotBlank()
+        val at = if (back) friend.origin else here.ifBlank { friend.at }
+        val note = if (back) "结束同行，返回$at" else "结束同行，留在$at"
+        return friend.copy(
+            traveling = false,
+            at = at,
+            history = (friend.history + note).takeLast(50),
+        )
+    }
 }

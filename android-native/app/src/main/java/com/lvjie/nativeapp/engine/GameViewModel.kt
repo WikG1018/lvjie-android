@@ -99,8 +99,7 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
                 ?: WorldPacks.all.firstNotNullOfOrNull { saves.readSave(it.id) }
             if (restored != null) {
                 _hasSave.value = true
-                _state.value = restored
-                _world.value = WorldPacks.byId(restored.worldId)
+                installSave(restored)
             }
             syncBgm()
         }
@@ -138,8 +137,7 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
             val existing = saves.readSave(worldId)
             if (existing != null) {
                 _hasSave.value = true
-                _state.value = existing
-                _world.value = WorldPacks.byId(existing.worldId)
+                installSave(existing)
                 _event.value = null
                 eventCount = 0
                 pushFeedback("已载入《${_world.value.name}》存档 · ${existing.name}")
@@ -168,8 +166,7 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
                 ?: WorldPacks.all.firstNotNullOfOrNull { saves.readSave(it.id) }
             if (existing != null) {
                 _hasSave.value = true
-                _state.value = existing
-                _world.value = WorldPacks.byId(existing.worldId)
+                installSave(existing)
                 _event.value = null
                 eventCount = 0
                 pushFeedback("继续《${_world.value.name}》· ${existing.name}")
@@ -187,7 +184,7 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
     override fun onCleared() {
         // 先落盘再 super，避免 scope 取消导致丢档
         try {
-            val s = _state.value
+            val s = MapHygiene.clean(_state.value)
             kotlinx.coroutines.runBlocking {
                 saves.writeSave(s)
             }
@@ -197,7 +194,8 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun persist() {
-        val s = _state.value
+        val s = MapHygiene.clean(_state.value)
+        if (s != _state.value) _state.value = s
         viewModelScope.launch { saves.writeSave(s) }
     }
 
@@ -222,11 +220,55 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun spar(name: String) {
-        val day = System.currentTimeMillis() / 86_400_000L
+        val day = Party.dayKey(_state.value.ageDays)
         val (friends, message) = Party.spar(_state.value.friends, name, day)
         _state.value = _state.value.copy(friends = friends)
         pushFeedback(message)
         persist()
+    }
+
+    fun setGender(gender: String) {
+        _state.update { it.copy(gender = MapHygiene.normGender(gender)) }
+        persist()
+    }
+
+    fun setBgm(on: Boolean) {
+        _state.update { it.copy(bgm = on) }
+        viewModelScope.launch { saves.setBgm(on) }
+        bgm.setEnabled(on)
+        persist()
+    }
+
+    fun endTravel(name: String, returnHome: Boolean) {
+        val here = currentPlaceName()
+        val before = _state.value.friends
+        val friends = Party.endTravel(before, name, here, returnHome)
+        _state.value = _state.value.copy(friends = friends)
+        val was = before.firstOrNull { it.name == name }
+        if (was != null && was.traveling) {
+            val at = friends.firstOrNull { it.name == name }?.at.orEmpty()
+            pushFeedback(if (returnHome && was.origin.isNotBlank()) "已送 $name 回$at" else "$name 留在$at")
+        }
+        persist()
+    }
+
+    fun dismissAll(returnHome: Boolean) {
+        val here = currentPlaceName()
+        _state.value = _state.value.copy(
+            friends = Party.dismissAll(_state.value.friends, here, returnHome),
+        )
+        pushFeedback(if (returnHome) "已解散同行，能送回的已送回" else "已解散同行，同伴留在原地")
+        persist()
+    }
+
+    fun teamPower(): Int = Party.teamPower(_state.value.power, _state.value.friends)
+
+    fun ageText(): String = StoryApply.ageText(_state.value.ageDays, _state.value.age)
+
+    private fun installSave(restored: PlayerState) {
+        val cleaned = MapHygiene.clean(restored)
+        _state.value = cleaned
+        _world.value = MapHygiene.overlay(WorldPacks.byId(cleaned.worldId), cleaned)
     }
 
     private fun currentPlaceName(): String {
@@ -377,8 +419,8 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
                 val restored = saves.readSave(_state.value.worldId)
                     ?: saves.readSave(_world.value.id)
                 if (restored != null) {
-                    _state.value = restored
-                    _world.value = WorldPacks.byId(restored.worldId)
+                    installSave(restored)
+                    persist()
                 }
                 pushFeedback("已导入 $n 个世界存档")
             } else {
@@ -387,10 +429,10 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
                     saveJson.decodeFromString(PlayerState.serializer(), raw.trim())
                 }.getOrNull()
                 if (single != null && single.worldId.isNotBlank() && single.name.isNotBlank()) {
-                    saves.writeSave(single)
-                    _state.value = single
-                    _world.value = WorldPacks.byId(single.worldId)
-                    pushFeedback("已导入存档：${single.name}")
+                    val cleaned = MapHygiene.clean(single)
+                    saves.writeSave(cleaned)
+                    installSave(cleaned)
+                    pushFeedback("已导入存档：${cleaned.name}")
                 } else {
                     pushFeedback("无法解析存档 JSON 或字段非法")
                 }
@@ -637,8 +679,10 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
                     "日本語" -> "日本語で書いてください"
                     else -> "用简体中文书写"
                 }
-                appendLine(langInstr + "，2~4 段叙事，结尾给出 2~3 个可选行动（每行一个，以 1. 2. 3. 开头）。")
-                append("不要输出 JSON。")
+                appendLine(langInstr + "。只输出一个 ```json 代码块，不要输出其它文字。")
+                appendLine("JSON 含 narrative（给玩家看的正文）、options（2~3 个字符串）、changes。")
+                appendLine("changes 可含 age_days、money_main、money_mid、money_high、money_peak、progress、add_items、new_locations、modify_locations、move_to。")
+                append("不要写 tier 或 tierIndex。新处所写入 new_locations 并用 move_to 到达。")
             }
             val user = custom?.let { "玩家自由行动：$it" } ?: "行动：${actionId}"
 
@@ -648,7 +692,8 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
                 llm.stream(_llmConfig.value, system, user)
                     .collect { piece ->
                         buf.append(piece)
-                        _event.update { it?.copy(shownText = buf.toString(), loading = false) }
+                        val visible = StoryApply.playerText(buf.toString())
+                        _event.update { it?.copy(shownText = visible, loading = false) }
                     }
             } catch (e: CancellationException) {
                 // 协程取消（如 endEvent）不是 LLM 失败，必须上抛
@@ -667,31 +712,30 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
                 pushFeedback("LLM 不可用，已切换本地剧情")
             }
             if (failed) return@launch
-            enforceDialogLimit()
-
-            // 完成后解析选项
             val text = buf.toString()
             if (text.isNotEmpty()) {
-                val lines = text.lines().map { it.trim() }
-                val optRe = Regex("""^\s*\d+[\.\uFF0E、\)）]\s*(.+)$""")
-                // 上游 v0.0.7.1：选项去掉重复序号，不再显示「1. 1.xxx」
-                val opts = lines.mapNotNull { line -> optRe.find(line.trim())?.groupValues?.getOrNull(1) }
-                    .map { s -> s.replace(Regex("""^\s*\d+[\.\uFF0E、\)）]\s*"""), "") }
-                val cleaned = lines.filterNot { optRe.matches(it.trim()) }.joinToString("\n")
+                val applied = StoryApply.apply(_state.value, _world.value.places, text)
+                _state.value = applied.state
+                if (applied.state.mapPlaces.isNotEmpty()) {
+                    _world.value = _world.value.copy(places = applied.state.mapPlaces)
+                }
                 _event.update {
                     it?.copy(
-                        fullText = cleaned.ifEmpty { text },
-                        shownText = cleaned.ifEmpty { text },
-                        options = opts.take(3),
+                        fullText = applied.display,
+                        shownText = applied.display,
+                        options = applied.options.take(3),
                         streaming = false,
                         loading = false,
-                        progressGain = 10 + (8..20).random(),
-                        moneyGain = if ((0..1).random() == 1) (10..40).random() else 0,
+                        progressGain = 0,
+                        moneyGain = 0,
+                        itemGain = null,
                     )
                 }
+                persist()
             } else {
                 _event.update { it?.copy(loading = false, streaming = false) }
             }
+            enforceDialogLimit()
         }
     }
 
@@ -769,8 +813,8 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
                 }
             } else s.quests
 
-            val pg = if (ev.progressGain == 0 && ev.fromLlm) 8 else ev.progressGain
-            val mg = if (ev.moneyGain == 0 && ev.fromLlm) 5 else ev.moneyGain
+            val pg = ev.progressGain
+            val mg = ev.moneyGain
             s.copy(
                 progress = s.progress + pg,
                 money = s.money + mg,

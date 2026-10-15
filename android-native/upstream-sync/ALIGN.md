@@ -46,3 +46,21 @@
 - FileProvider 文件分享存档 JSON
 - release minify + shrinkResources
 
+## v1.7.0 剧情落库
+
+对照上游 `changes.js` / `map.js` / `party.js` / `llm.js` 的 `extractGameJSON`。原生不整仓合并。
+
+已同步：
+
+- 模型 ```json 落库：展示只有 narrative；changes 写入年龄、四档货币、进度、物品、新地点、改地点、移动。不再随机加进度/货币。本地模板事件仍用脚本收益。
+- 赠与判定：明确收下/接过/获得才到手；硬拒绝、条件许诺、还在征询、只是拿给你看不算。软推辞且后文没有明确收下不算；「推辞一番还是收了」算到手。正文已到手但 JSON 漏了 add_items 会补上（desc=剧情赠与）。JSON 里有、正文没提到的物品保留。
+- 新地点最多 6，地图不超过 80。同名地点合并 beasts / interactables / people，不新建重复地点。
+- 加载与落库清洗 name 为空或「未知生物」的 beasts，以及 name 为空或「未知」的 interactables。运行时若 mapPlaces 非空则盖过静态地点模板。
+- 队伍战力 = 玩家战力 + 同行者战力（≤0 不计）。解散全队；结束同行可送回原处或留在原地。
+- 切磋「今日」按游戏天 ageDays/30。年龄显示为 X岁Y月Z天（360 天一年，30 天一月）。
+
+故意不同步：
+
+- 上游免费通道仍不移植（会伪装 OpenCode Zen 指纹）。
+
+

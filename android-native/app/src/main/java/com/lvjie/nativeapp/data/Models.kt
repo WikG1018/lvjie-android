@@ -5,6 +5,20 @@ import com.lvjie.nativeapp.ui.theme.WorldPalettes
 import kotlinx.serialization.Serializable
 
 @Serializable
+data class Beast(
+    val name: String = "",
+    val realm: String = "",
+    val power: Int = 0,
+    val drops: String = "",
+)
+
+@Serializable
+data class Spot(
+    val name: String = "",
+    val intro: String = "",
+)
+
+@Serializable
 data class Place(
     val id: String = "",
     val name: String = "未知",
@@ -13,6 +27,10 @@ data class Place(
     val desc: String = "",
     val people: List<String> = emptyList(),
     val shop: Boolean = false,
+    val beasts: List<Beast> = emptyList(),
+    val interactables: List<Spot> = emptyList(),
+    val notes: List<String> = emptyList(),
+    val continent: String = "",
 )
 
 @Serializable
@@ -55,6 +73,9 @@ data class Friend(
     val origin: String = "",
     val history: List<String> = emptyList(),
     val lastSparDay: Long = 0,
+    val power: Int = 0,
+    val realm: String = "",
+    val ageDays: Int = 0,
 )
 
 @Serializable
@@ -87,6 +108,9 @@ data class PlayerState(
     val bgm: Boolean = true,
     val dialogLimit: Boolean = true,
     val marriagePref: String = "",
+    val ageDays: Int = 0,
+    val gender: String = "",
+    val mapPlaces: List<Place> = emptyList(),
 )
 
 data class WorldPack(

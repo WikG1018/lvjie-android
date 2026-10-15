@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import com.lvjie.nativeapp.engine.MapHygiene
 
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "lvjie")
 
@@ -45,7 +46,7 @@ class SaveRepository(private val context: Context) {
     suspend fun readSave(worldId: String): PlayerState? =
         context.dataStore.data.first()[Keys.save(worldId)]?.let {
             runCatching { json.decodeFromString<PlayerState>(it) }.getOrNull()
-        }
+        }?.let { MapHygiene.clean(it) }
 
     suspend fun deleteSave(worldId: String) {
         context.dataStore.edit { prefs ->
