@@ -15,6 +15,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.lvjie.nativeapp.ui.theme.*
@@ -197,6 +198,23 @@ fun ListItem(
             Text(subtitle, color = c.ink3, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
         trail?.invoke()
+    }
+}
+
+/** 窄屏按钮换行。FlowRow 在当前 Compose 上仍标了 ExperimentalLayoutApi。 */
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+@Composable
+fun LvjieFlow(
+    modifier: Modifier = Modifier,
+    spacing: Dp = 8.dp,
+    content: @Composable () -> Unit,
+) {
+    androidx.compose.foundation.layout.FlowRow(
+        modifier = modifier,
+        horizontalArrangement = Arrangement.spacedBy(spacing),
+        verticalArrangement = Arrangement.spacedBy(spacing),
+    ) {
+        content()
     }
 }
 
