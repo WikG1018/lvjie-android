@@ -15,8 +15,8 @@ android {
         applicationId = "com.lvjie.nativeapp"
         minSdk = 26
         targetSdk = 35
-        versionCode = 12
-        versionName = "1.5.1"
+        versionCode = 13
+        versionName = "1.6.0"
     }
 
     signingConfigs {

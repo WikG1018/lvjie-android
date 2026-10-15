@@ -279,7 +279,7 @@ fun MapScreen(strings: com.lvjie.nativeapp.i18n.UiStrings = com.lvjie.nativeapp.
 
 /** P08 人物 */
 @Composable
-fun ProfileScreen(strings: com.lvjie.nativeapp.i18n.UiStrings = com.lvjie.nativeapp.i18n.I18n.of("简体中文"), state: PlayerState, pack: WorldPack, onBreakthrough: () -> Unit, onPropose: (String) -> Unit = {}) {
+fun ProfileScreen(strings: com.lvjie.nativeapp.i18n.UiStrings = com.lvjie.nativeapp.i18n.I18n.of("简体中文"), state: PlayerState, pack: WorldPack, onBreakthrough: () -> Unit, onPropose: (String) -> Unit = {}, onToggleTravel: (String) -> Unit = {}, onSpar: (String) -> Unit = {}) {
     val c = LocalLvjieColors.current
     val can = canBreak(state, pack)
     LazyColumn(
@@ -358,8 +358,19 @@ fun ProfileScreen(strings: com.lvjie.nativeapp.i18n.UiStrings = com.lvjie.native
                             subtitle = "${f.at} · 好感 ${f.favor} · ${f.intro}",
                             modifier = Modifier.padding(vertical = 4.dp),
                             trail = {
-                                if (!f.married && pack.marriage) {
-                                    LvjieButton("求婚", onClick = { onPropose(f.name) }, style = BtnStyle.Tonal, small = true)
+                                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                    LvjieButton(
+                                        if (f.traveling) "结束同行" else "邀请同行",
+                                        onClick = { onToggleTravel(f.name) },
+                                        style = BtnStyle.Ghost,
+                                        small = true,
+                                    )
+                                    if (f.traveling) {
+                                        LvjieButton("切磋", onClick = { onSpar(f.name) }, style = BtnStyle.Tonal, small = true)
+                                    }
+                                    if (!f.married && pack.marriage) {
+                                        LvjieButton("求婚", onClick = { onPropose(f.name) }, style = BtnStyle.Tonal, small = true)
+                                    }
                                 }
                             },
                         )

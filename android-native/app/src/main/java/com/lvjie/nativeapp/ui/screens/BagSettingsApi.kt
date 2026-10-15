@@ -22,6 +22,7 @@ import com.lvjie.nativeapp.data.PlayerState
 import com.lvjie.nativeapp.data.WorldPack
 import com.lvjie.nativeapp.ui.components.*
 import com.lvjie.nativeapp.ui.theme.LocalLvjieColors
+import com.lvjie.nativeapp.llm.ProviderPresets
 import com.lvjie.nativeapp.ui.theme.Radius
 
 /** P10/P11 囊务 = 任务 + 行囊 */
@@ -260,6 +261,7 @@ fun ApiScreen(
     var key by remember { mutableStateOf(config.apiKey) }
     var keyVisible by remember { mutableStateOf(false) }
     var chat by remember { mutableStateOf(config.protocol == "chat") }
+    var presetNote by remember { mutableStateOf("") }
     LaunchedEffect(Unit) {
         baseUrl = config.baseUrl
         model = config.model
@@ -289,6 +291,27 @@ fun ApiScreen(
                     if (chat) "POST {Base URL}/chat/completions" else "POST {Base URL}/responses",
                     color = c.ink3, fontSize = 11.sp,
                 )
+            }
+        }
+        item {
+            LvjieCard {
+                Text("服务商预设", fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                Spacer(Modifier.height(8.dp))
+                Text("对齐上游 v0.4.0。点选后填入地址和模型，Key 仍由你自己申请。", color = c.ink3, fontSize = 11.sp)
+                Spacer(Modifier.height(8.dp))
+                ProviderPresets.all.forEach { preset ->
+                    TextButton(onClick = {
+                        baseUrl = preset.baseUrl
+                        if (preset.model.isNotEmpty()) model = preset.model
+                        chat = true
+                        presetNote = preset.steps.joinToString("\n")
+                    }) {
+                        Text(if (preset.tag.isBlank()) preset.name else "${preset.name} · ${preset.tag}", fontSize = 13.sp)
+                    }
+                }
+                if (presetNote.isNotEmpty()) {
+                    Text(presetNote, color = c.ink2, fontSize = 12.sp)
+                }
             }
         }
         item {

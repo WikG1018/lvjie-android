@@ -202,10 +202,36 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun moveTo(placeId: String) {
-        _state.update { it.copy(loc = placeId) }
         val place = _world.value.places.firstOrNull { it.id == placeId }
+        _state.update { current ->
+            current.copy(
+                loc = placeId,
+                friends = Party.follow(current.friends, place?.name.orEmpty()),
+            )
+        }
         if (place != null) pushFeedback("已抵达 ${place.name}")
         persist()
+    }
+
+    fun toggleTravel(name: String) {
+        val here = currentPlaceName()
+        val (friends, message) = Party.toggle(_state.value.friends, name, here)
+        _state.value = _state.value.copy(friends = friends)
+        pushFeedback(message)
+        persist()
+    }
+
+    fun spar(name: String) {
+        val day = System.currentTimeMillis() / 86_400_000L
+        val (friends, message) = Party.spar(_state.value.friends, name, day)
+        _state.value = _state.value.copy(friends = friends)
+        pushFeedback(message)
+        persist()
+    }
+
+    private fun currentPlaceName(): String {
+        val state = _state.value
+        return _world.value.places.firstOrNull { it.id == state.loc }?.name.orEmpty()
     }
 
     /** 扣款（最低档计，高抵低找零） */
@@ -599,6 +625,12 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
                 appendLine("玩家 ${s.name}，等级 ${w.tiers.getOrElse(s.tierIndex) { "?" }}，进度 ${s.progress}/${WorldPacks.tierReq.getOrElse(s.tierIndex + 1) { 9999 }}。")
                 appendLine("地点：${loc?.name ?: ""} — ${loc?.desc ?: ""}")
                 appendLine("行动风格：${s.aiStyle}。")
+                val party = s.friends.filter { it.traveling }
+                if (party.isNotEmpty()) {
+                    appendLine("同行者：${party.joinToString("、") { it.name }}。他们必须与玩家同场景，战斗时把他们算进去，不得凭空消失。")
+                }
+                appendLine("不要写出没有名字的生物或物件，禁止使用「未知生物」「未知」充数。")
+                appendLine("玩家进入可单独前往的新处所时，写成新地点并让玩家到达那里，不要把它写成当前地点里的一个物件。")
                 val langInstr = when (s.lang) {
                     "繁體中文" -> "用繁體中文書寫"
                     "English" -> "Write in English"

@@ -252,7 +252,7 @@ fun AppRoot(
                         onHint = { msg -> vm.debugHint(msg) },
                     )
                     GameTab.Map -> MapScreen(com.lvjie.nativeapp.i18n.I18n.of(state.lang), state, pack, onMove = { vm.moveTo(it) })
-                    GameTab.Profile -> ProfileScreen(com.lvjie.nativeapp.i18n.I18n.of(state.lang), state, pack, onBreakthrough = { vm.breakthrough() }, onPropose = { vm.propose(it) })
+                    GameTab.Profile -> ProfileScreen(com.lvjie.nativeapp.i18n.I18n.of(state.lang), state, pack, onBreakthrough = { vm.breakthrough() }, onPropose = { vm.propose(it) }, onToggleTravel = { vm.toggleTravel(it) }, onSpar = { vm.spar(it) })
                     GameTab.Bag -> BagScreen(com.lvjie.nativeapp.i18n.I18n.of(state.lang), state, pack, onUseItem = { vm.useItem(it) })
                     GameTab.Settings -> SettingsScreen(
                         strings = com.lvjie.nativeapp.i18n.I18n.of(state.lang),

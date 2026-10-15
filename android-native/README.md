@@ -18,7 +18,8 @@
 - **玩法**：事件流式叙事（本地模板 + LLM SSE）、选项、自由输入、数值落库、突破全屏、物品
 - **数据**：DataStore 存档 + 导入导出（不含 Key）
 - **安全**：Android Keystore AES-256-GCM 加密 API Key
-- **LLM**：chat / response 协议，SSE 流式，模型列表拉取
+- **LLM**：chat / response 协议，SSE 流式不等待超时上限，模型列表拉取，11 家服务商预设
+- **同行**：同伴可邀请同行，换地点时跟随，每日可切磋一次
 
 ## 签名
 

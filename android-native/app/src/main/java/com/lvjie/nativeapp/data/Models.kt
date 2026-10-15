@@ -51,6 +51,10 @@ data class Friend(
     val intro: String = "",
     val married: Boolean = false,
     val gender: String = "",
+    val traveling: Boolean = false,
+    val origin: String = "",
+    val history: List<String> = emptyList(),
+    val lastSparDay: Long = 0,
 )
 
 @Serializable

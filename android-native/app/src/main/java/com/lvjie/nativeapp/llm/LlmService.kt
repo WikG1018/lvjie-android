@@ -23,7 +23,7 @@ import java.util.concurrent.TimeUnit
 class LlmService(
     private val http: OkHttpClient = OkHttpClient.Builder()
         .connectTimeout(20, TimeUnit.SECONDS)
-        .readTimeout(300, TimeUnit.SECONDS)
+        .readTimeout(0, TimeUnit.SECONDS)
         .writeTimeout(60, TimeUnit.SECONDS)
         .build(),
 ) {
