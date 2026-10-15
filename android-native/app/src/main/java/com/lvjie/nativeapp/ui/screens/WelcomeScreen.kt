@@ -179,7 +179,7 @@ fun WelcomeScreen(
         item {
             LvjieCard {
                 SettingRow(strings.bgm, "内置环境音乐，可随时开关") {
-                    LvjieSwitch(bgmOn) { onBgm(!bgmOn) }
+                    LvjieSwitch(bgmOn, onToggle = { onBgm(!bgmOn) })
                 }
             }
         }
