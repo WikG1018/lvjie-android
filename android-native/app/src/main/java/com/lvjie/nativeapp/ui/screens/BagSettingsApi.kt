@@ -119,10 +119,11 @@ fun SettingsScreen(
     onExport: () -> Unit,
     onImport: (String) -> Unit,
     onDelete: () -> Unit,
+    gender: String = "",
+    onGender: (String) -> Unit = {},
 ) {
     val c = LocalLvjieColors.current
     var showImport by remember { mutableStateOf(false) }
-    var importText by remember { mutableStateOf("") }
 
     LazyColumn(
         modifier = Modifier.fillMaxSize().padding(horizontal = 14.dp),
@@ -137,7 +138,7 @@ fun SettingsScreen(
                     Box(Modifier.size(7.dp).clip(CircleShape).background(c.world.accent))
                 }
                 Spacer(Modifier.height(12.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                LvjieFlow {
                     listOf("沉浸", "简练", "诙谐").forEach { s ->
                         LvjieButton(s, onClick = { onAiStyle(s) }, style = if (state.aiStyle == s) BtnStyle.Primary else BtnStyle.Ghost, small = true)
                     }
@@ -152,13 +153,18 @@ fun SettingsScreen(
                     Box(Modifier.size(7.dp).clip(CircleShape).background(c.world.accent))
                 }
                 Spacer(Modifier.height(12.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                LvjieFlow {
                     listOf("简体中文", "繁體中文", "English", "日本語").forEach { s ->
                         LvjieButton(s, onClick = { onLang(s) }, style = if (state.lang == s) BtnStyle.Primary else BtnStyle.Ghost, small = true)
                     }
                 }
                 Spacer(Modifier.height(8.dp))
                 Text("影响 UI 文案与 AI 叙事输出语言。", color = c.ink3, fontSize = 11.sp)
+            }
+        }
+        item {
+            LvjieCard {
+                GenderPicker(current = gender, onGender = onGender)
             }
         }
         item {
@@ -190,7 +196,7 @@ fun SettingsScreen(
                     Box(Modifier.size(7.dp).clip(CircleShape).background(c.world.accent))
                 }
                 Spacer(Modifier.height(12.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                LvjieFlow {
                     LvjieButton(strings.export, onClick = onExport, style = BtnStyle.Outline, small = true)
                     LvjieButton(strings.importSave, onClick = { showImport = true }, style = BtnStyle.Outline, small = true)
                     LvjieButton(strings.deleteWorld, onClick = onDelete, style = BtnStyle.Danger, small = true)
@@ -202,38 +208,81 @@ fun SettingsScreen(
     }
 
     if (showImport) {
-        AlertDialog(
-            onDismissRequest = { showImport = false },
-            title = { Text(strings.importJson) },
-            text = {
-                Column {
-                    Text(strings.importHint, fontSize = 12.sp, color = c.ink2)
-                    Spacer(Modifier.height(8.dp))
-                    OutlinedTextField(
-                        value = importText,
-                        onValueChange = { importText = it },
-                        modifier = Modifier.fillMaxWidth().height(140.dp),
-                        placeholder = { Text("{saves:{...}}", fontSize = 12.sp) },
-                        shape = RoundedCornerShape(Radius.Md),
-                    )
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = {
-                    showImport = false
-                    onImport(importText)
-                    importText = ""
-                }) { Text(strings.importBtn) }
-            },
-            dismissButton = {
-                TextButton(onClick = { showImport = false }) { Text(strings.cancel) }
-            },
+        ImportJsonDialog(
+            strings = strings,
+            onDismiss = { showImport = false },
+            onImport = onImport,
         )
     }
 }
 
 @Composable
-private fun SettingRow(title: String, desc: String, trail: @Composable () -> Unit) {
+internal fun ImportJsonDialog(
+    strings: com.lvjie.nativeapp.i18n.UiStrings,
+    onDismiss: () -> Unit,
+    onImport: (String) -> Unit,
+) {
+    val c = LocalLvjieColors.current
+    var importText by remember { mutableStateOf("") }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(strings.importJson) },
+        text = {
+            Column {
+                Text(strings.importHint, fontSize = 12.sp, color = c.ink2)
+                Spacer(Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = importText,
+                    onValueChange = { importText = it },
+                    modifier = Modifier.fillMaxWidth().height(140.dp),
+                    placeholder = { Text("{saves:{...}}", fontSize = 12.sp) },
+                    shape = RoundedCornerShape(Radius.Md),
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = {
+                val raw = importText
+                importText = ""
+                onDismiss()
+                onImport(raw)
+            }) { Text(strings.importBtn) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(strings.cancel) }
+        },
+    )
+}
+
+/** 与上游欢迎页一致：不填 / 男 / 女。空字符串表示不填。 */
+internal fun genderChoice(current: String): String = when (current.trim().lowercase()) {
+    "男", "male", "m" -> "男"
+    "女", "female", "f" -> "女"
+    else -> ""
+}
+
+@Composable
+internal fun GenderPicker(current: String, onGender: (String) -> Unit) {
+    val c = LocalLvjieColors.current
+    val selected = genderChoice(current)
+    Text("性别", fontSize = 15.sp, fontWeight = FontWeight.Bold)
+    Spacer(Modifier.height(8.dp))
+    Text("不填则不写入角色性别。", color = c.ink3, fontSize = 11.sp)
+    Spacer(Modifier.height(12.dp))
+    LvjieFlow {
+        listOf("" to "不填", "男" to "男", "女" to "女").forEach { (value, label) ->
+            LvjieButton(
+                label,
+                onClick = { onGender(value) },
+                style = if (selected == value) BtnStyle.Primary else BtnStyle.Ghost,
+                small = true,
+            )
+        }
+    }
+}
+
+@Composable
+internal fun SettingRow(title: String, desc: String, trail: @Composable () -> Unit) {
     val c = LocalLvjieColors.current
     Row(verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) {
@@ -282,7 +331,7 @@ fun ApiScreen(
                     Box(Modifier.size(7.dp).clip(CircleShape).background(c.world.accent))
                 }
                 Spacer(Modifier.height(12.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                LvjieFlow {
                     LvjieButton("chat", onClick = { chat = true }, style = if (chat) BtnStyle.Primary else BtnStyle.Ghost, small = true)
                     LvjieButton("response", onClick = { chat = false }, style = if (!chat) BtnStyle.Primary else BtnStyle.Ghost, small = true)
                 }
@@ -348,7 +397,7 @@ fun ApiScreen(
                 Spacer(Modifier.height(6.dp))
                 Text(strings.keyHint, color = c.ink3, fontSize = 11.sp)
                 Spacer(Modifier.height(12.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                LvjieFlow {
                     LvjieButton(strings.save, onClick = { onSave(baseUrl, model, key, if (chat) "chat" else "response") }, small = true)
                     LvjieButton(strings.test, onClick = { onTest(baseUrl, model, key, if (chat) "chat" else "response") }, style = BtnStyle.Outline, small = true)
                     LvjieButton(strings.refreshModels, onClick = { onRefreshModels(baseUrl, model, key, if (chat) "chat" else "response") }, style = BtnStyle.Outline, small = true)

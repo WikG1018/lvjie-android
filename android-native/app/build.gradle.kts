@@ -15,38 +15,50 @@ android {
         applicationId = "com.lvjie.nativeapp"
         minSdk = 26
         targetSdk = 35
-        versionCode = 13
-        versionName = "1.6.0"
+        versionCode = 14
+        versionName = "1.7.0"
     }
 
+    // 密码只从 local.properties / 环境变量读取，不入库。
+    // 缺 keystore 或密码为空时不创建 release 签名，避免配置阶段因 storeFile 不存在而失败。
+    val signingProps = Properties()
+    val localProps = rootProject.file("local.properties")
+    if (localProps.exists()) localProps.inputStream().use { signingProps.load(it) }
+    fun signingProp(key: String, env: String): String =
+        (System.getenv(env) ?: signingProps.getProperty(key) ?: "").trim()
+    val releaseStoreFile = file(signingProp("storeFile", "LVJIE_STORE_FILE").ifEmpty {
+        rootProject.file("release.keystore").absolutePath
+    })
+    val releaseStorePassword = signingProp("storePassword", "LVJIE_STORE_PASSWORD")
+    val releaseKeyAlias = signingProp("keyAlias", "LVJIE_KEY_ALIAS").ifEmpty { "lvjie" }
+    val releaseKeyPassword = signingProp("keyPassword", "LVJIE_KEY_PASSWORD").ifEmpty { releaseStorePassword }
+    val releaseSigningReady = releaseStoreFile.exists() && releaseStorePassword.isNotEmpty()
+
     signingConfigs {
-        create("release") {
-            // 从 local.properties / 环境变量读取，避免密码入库
-            val lp = rootProject.file("local.properties")
-            val props = Properties()
-            if (lp.exists()) lp.inputStream().use { props.load(it) }
-            fun prop(k: String, env: String): String =
-                (System.getenv(env) ?: props.getProperty(k) ?: "").trim()
-            storeFile = file(prop("storeFile", "LVJIE_STORE_FILE").ifEmpty {
-                rootProject.file("release.keystore").absolutePath
-            })
-            storePassword = prop("storePassword", "LVJIE_STORE_PASSWORD")
-            keyAlias = prop("keyAlias", "LVJIE_KEY_ALIAS").ifEmpty { "lvjie" }
-            keyPassword = prop("keyPassword", "LVJIE_KEY_PASSWORD").ifEmpty { storePassword }
+        if (releaseSigningReady) {
+            create("release") {
+                storeFile = releaseStoreFile
+                storePassword = releaseStorePassword
+                keyAlias = releaseKeyAlias
+                keyPassword = releaseKeyPassword
+            }
         }
     }
     buildTypes {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
-            signingConfig = signingConfigs.getByName("release")
+            if (releaseSigningReady) {
+                signingConfig = signingConfigs.getByName("release")
+            }
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
         }
         debug {
-            signingConfig = signingConfigs.getByName("release")
+            // 不用发行签名。无 keystore 时使用 AGP 默认 debug 密钥。
+            signingConfig = signingConfigs.getByName("debug")
         }
     }
     compileOptions {
@@ -87,4 +99,5 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
 
     debugImplementation("androidx.compose.ui:ui-tooling")
+    testImplementation("junit:junit:4.13.2")
 }
