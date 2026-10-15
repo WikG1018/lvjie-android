@@ -42,10 +42,19 @@ fun WelcomeScreen(
     saveLevel: String = "",
     savePlace: String = "",
     hasSave: Boolean = false,
+    gender: String = "",
+    dialogLimit: Boolean = true,
+    bgmOn: Boolean = true,
+    onGender: (String) -> Unit = {},
+    onToggleLimit: () -> Unit = {},
+    onBgm: (Boolean) -> Unit = {},
+    onExport: () -> Unit = {},
+    onImport: (String) -> Unit = {},
 ) {
     val c = LocalLvjieColors.current
     val pack = WorldPacks.byId(selectedId)
     val rows = WorldPacks.all.chunked(2)
+    var showImport by remember { mutableStateOf(false) }
 
     LazyColumn(
         modifier = Modifier.fillMaxSize().padding(horizontal = 14.dp),
@@ -82,7 +91,7 @@ fun WelcomeScreen(
                     fontSize = 13.sp,
                 )
                 Spacer(Modifier.height(12.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                LvjieFlow {
                     LvjieButton(strings.startJourney, onClick = onStart)
                     LvjieButton("🛠 " + strings.customWorld, onClick = onAuthor, style = BtnStyle.Outline)
                 }
@@ -153,7 +162,42 @@ fun WelcomeScreen(
         }
 
         item {
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            SectionLabel(strings.settings)
+        }
+        item {
+            LvjieCard {
+                GenderPicker(current = gender, onGender = onGender)
+            }
+        }
+        item {
+            LvjieCard {
+                SettingRow(strings.dialogLimit, "开启后单次事件约 10 轮收束") {
+                    LvjieSwitch(dialogLimit, onToggleLimit)
+                }
+            }
+        }
+        item {
+            LvjieCard {
+                SettingRow(strings.bgm, "内置环境音乐，可随时开关") {
+                    LvjieSwitch(bgmOn, onToggle = { onBgm(!bgmOn) })
+                }
+            }
+        }
+        item {
+            LvjieCard {
+                Text("存档", fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                Spacer(Modifier.height(12.dp))
+                LvjieFlow {
+                    LvjieButton(strings.export, onClick = onExport, style = BtnStyle.Outline, small = true)
+                    LvjieButton(strings.importSave, onClick = { showImport = true }, style = BtnStyle.Outline, small = true)
+                }
+                Spacer(Modifier.height(8.dp))
+                Text("导出为 JSON（不含 API Key），可分享或备份。", color = c.ink3, fontSize = 11.sp)
+            }
+        }
+
+        item {
+            LvjieFlow {
                 LvjieButton(strings.worldDetail, onClick = onDetail, style = BtnStyle.Ghost, small = true)
                 LvjieButton(strings.api, onClick = onApi, style = BtnStyle.Ghost, small = true)
                 LvjieButton(strings.help, onClick = onHelp, style = BtnStyle.Ghost, small = true)
@@ -162,6 +206,14 @@ fun WelcomeScreen(
 
         // 底部留出安全区，避免最后一项被手势条贴住
         item { Spacer(Modifier.height(8.dp)) }
+    }
+
+    if (showImport) {
+        ImportJsonDialog(
+            strings = strings,
+            onDismiss = { showImport = false },
+            onImport = onImport,
+        )
     }
 }
 

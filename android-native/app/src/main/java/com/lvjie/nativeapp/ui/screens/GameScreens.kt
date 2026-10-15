@@ -3,14 +3,11 @@ package com.lvjie.nativeapp.ui.screens
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -64,7 +61,7 @@ fun SceneScreen(
                 Text(place.desc, color = c.ink2, fontSize = 12.5.sp, lineHeight = 20.sp)
                 Spacer(Modifier.height(12.dp))
                 val busy = event?.loading == true || event?.streaming == true
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.horizontalScroll(rememberScrollState())) {
+                LvjieFlow {
                     pack.actions.forEach { a ->
                         LvjieButton(a.label, onClick = { if (!busy) onAction(a.id) }, style = BtnStyle.Tonal, small = true, enabled = !busy)
                     }
@@ -112,6 +109,49 @@ fun SceneScreen(
                             modifier = Modifier.padding(vertical = 4.dp),
                             trail = { LvjieButton(strings.talk, onClick = { onTalk(name) }, style = BtnStyle.Tonal, small = true) },
                             onClick = { onTalk(name) },
+                        )
+                    }
+                }
+            }
+        }
+
+        val beasts = place.beasts.filter { beast -> named(beast.name) && beast.name.trim() != "未知生物" }
+        if (beasts.isNotEmpty()) {
+            item {
+                LvjieCard {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("生物", fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                        Spacer(Modifier.width(8.dp))
+                        Box(Modifier.size(7.dp).clip(CircleShape).background(c.world.accent))
+                    }
+                    Spacer(Modifier.height(10.dp))
+                    beasts.forEach { beast ->
+                        ListItem(
+                            icon = "⚔",
+                            title = beast.name.trim(),
+                            subtitle = beastDetail(beast.realm, beast.power, beast.drops),
+                            modifier = Modifier.padding(vertical = 4.dp),
+                        )
+                    }
+                }
+            }
+        }
+        val interactables = place.interactables.filter { spot -> named(spot.name) && spot.name.trim() != "未知" }
+        if (interactables.isNotEmpty()) {
+            item {
+                LvjieCard {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("可交互", fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                        Spacer(Modifier.width(8.dp))
+                        Box(Modifier.size(7.dp).clip(CircleShape).background(c.world.accent))
+                    }
+                    Spacer(Modifier.height(10.dp))
+                    interactables.forEach { spot ->
+                        ListItem(
+                            icon = "🔍",
+                            title = spot.name.trim(),
+                            subtitle = spot.intro.trim().ifBlank { "在此" }.let { if (it == "未知") "在此" else it },
+                            modifier = Modifier.padding(vertical = 4.dp),
                         )
                     }
                 }
@@ -170,7 +210,7 @@ private fun EventCard(
                 Box(Modifier.size(2.dp, 14.dp).background(c.world.accent))
             }
         }
-        if (!event.streaming && event.options.isNotEmpty()) {
+        if (!event.streaming && event.options.isNotEmpty() && !event.loading) {
             Spacer(Modifier.height(8.dp))
             event.options.forEachIndexed { i, opt ->
                 val isPrimary = i == 0
@@ -188,24 +228,29 @@ private fun EventCard(
                 }
             }
         }
-        Spacer(Modifier.height(12.dp))
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedTextField(
-                value = free,
-                onValueChange = onFreeChange,
-                modifier = Modifier.weight(1f).height(48.dp),
-                placeholder = { Text(strings.freeInputHint, fontSize = 12.sp) },
-                singleLine = true,
-                shape = RoundedCornerShape(14.dp),
-                colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = c.world.accent, unfocusedBorderColor = c.line),
-            )
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(14.dp))
-                    .background(c.world.accent)
-                    .clickable(onClick = onSend)
-                    .padding(horizontal = 16.dp, vertical = 14.dp)
-            ) { Text(strings.send, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold) }
+        val turnSettled = !event.streaming && !event.loading
+        val showFree = turnSettled && event.options.isEmpty()
+        if (showFree) {
+            Spacer(Modifier.height(12.dp))
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(
+                    value = free,
+                    onValueChange = onFreeChange,
+                    modifier = Modifier.weight(1f).height(48.dp),
+                    placeholder = { Text(strings.freeInputHint, fontSize = 12.sp) },
+                    singleLine = true,
+                    enabled = enabled,
+                    shape = RoundedCornerShape(14.dp),
+                    colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = c.world.accent, unfocusedBorderColor = c.line),
+                )
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(c.world.accent)
+                        .clickable(enabled = enabled, onClick = onSend)
+                        .padding(horizontal = 16.dp, vertical = 14.dp)
+                ) { Text(strings.send, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold) }
+            }
         }
     }
 }
@@ -263,25 +308,54 @@ fun MapScreen(strings: com.lvjie.nativeapp.i18n.UiStrings = com.lvjie.nativeapp.
         item { SectionLabel("${pack.icon} ${pack.name}界 · ${pack.places.size} 地点") }
         items(pack.places) { p ->
             val cur = p.id == state.loc
-            ListItem(
-                icon = if (cur) "📍" else when (p.type) {
-                    "秘境" -> "🏯"; "荒野", "险地", "野外" -> "⛰"; "渡口" -> "🌊"; else -> "🏙"
-                },
-                title = p.name + if (cur) " · 当前" else "",
-                subtitle = "${p.type} · " + if (p.people.isEmpty()) "无人" else "${p.people.size} 人",
-                modifier = if (cur) Modifier.border(1.5.dp, c.world.accent, RoundedCornerShape(Radius.Md)) else Modifier,
-                trail = { LvjieChip(if (cur) strings.here else strings.go, selected = cur) },
-                onClick = if (cur) null else { { onMove(p.id) } },
-            )
+            val beasts = p.beasts.filter { named(it.name) && it.name.trim() != "未知生物" }
+            val interactables = p.interactables.filter { named(it.name) && it.name.trim() != "未知" }
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                ListItem(
+                    icon = if (cur) "📍" else when (p.type) {
+                        "秘境" -> "🏯"; "荒野", "险地", "野外" -> "⛰"; "渡口" -> "🌊"; else -> "🏙"
+                    },
+                    title = p.name + if (cur) " · 当前" else "",
+                    subtitle = "${p.type} · " + if (p.people.isEmpty()) "无人" else "${p.people.size} 人",
+                    modifier = if (cur) Modifier.border(1.5.dp, c.world.accent, RoundedCornerShape(Radius.Md)) else Modifier,
+                    trail = { LvjieChip(if (cur) strings.here else strings.go, selected = cur) },
+                    onClick = if (cur) null else { { onMove(p.id) } },
+                )
+                if (beasts.isNotEmpty() || interactables.isNotEmpty()) {
+                    Text(
+                        listOfNotNull(
+                            beasts.takeIf { it.isNotEmpty() }?.joinToString("、") { it.name.trim() }?.let { "生物 $it" },
+                            interactables.takeIf { it.isNotEmpty() }?.joinToString("、") { it.name.trim() }?.let { "可交互 $it" },
+                        ).joinToString(" · "),
+                        color = c.ink3,
+                        fontSize = 11.sp,
+                        modifier = Modifier.padding(horizontal = 4.dp),
+                    )
+                }
+            }
         }
     }
 }
 
 /** P08 人物 */
 @Composable
-fun ProfileScreen(strings: com.lvjie.nativeapp.i18n.UiStrings = com.lvjie.nativeapp.i18n.I18n.of("简体中文"), state: PlayerState, pack: WorldPack, onBreakthrough: () -> Unit, onPropose: (String) -> Unit = {}) {
+fun ProfileScreen(
+    strings: com.lvjie.nativeapp.i18n.UiStrings = com.lvjie.nativeapp.i18n.I18n.of("简体中文"),
+    state: PlayerState,
+    pack: WorldPack,
+    onBreakthrough: () -> Unit,
+    onPropose: (String) -> Unit = {},
+    onToggleTravel: (String) -> Unit = {},
+    onSpar: (String) -> Unit = {},
+    teamPower: String = "",
+    ageText: String = "",
+    onEndTravel: (String, Boolean) -> Unit = { _, _ -> },
+    onDismissAll: (Boolean) -> Unit = {},
+) {
     val c = LocalLvjieColors.current
     val can = canBreak(state, pack)
+    var endName by remember { mutableStateOf<String?>(null) }
+    var dismissAll by remember { mutableStateOf(false) }
     LazyColumn(
         modifier = Modifier.fillMaxSize().padding(horizontal = 14.dp),
         contentPadding = PaddingValues(vertical = 12.dp, horizontal = 2.dp),
@@ -313,13 +387,13 @@ fun ProfileScreen(strings: com.lvjie.nativeapp.i18n.UiStrings = com.lvjie.native
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 StatCell(strings.power, state.power.toString(), Modifier.weight(1f))
-                StatCell(strings.age, "${state.age} 岁", Modifier.weight(1f))
+                StatCell("队伍战力", teamPower, Modifier.weight(1f))
             }
         }
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                StatCell(strings.age, ageText, Modifier.weight(1f))
                 StatCell(pack.money.ifBlank { "币" }, state.money.toString(), Modifier.weight(1f))
-                StatCell(strings.companions, "${state.friends.size} 人", Modifier.weight(1f))
             }
         }
         if (state.moneyMid > 0 || state.moneyHigh > 0 || state.moneyPeak > 0) {
@@ -348,21 +422,35 @@ fun ProfileScreen(strings: com.lvjie.nativeapp.i18n.UiStrings = com.lvjie.native
                     Text("${state.friends.size} 人", color = c.ink3, fontSize = 11.sp)
                 }
                 Spacer(Modifier.height(10.dp))
+                if (state.friends.any { it.traveling }) {
+                    LvjieFlow {
+                        LvjieButton("解散全队", onClick = { dismissAll = true }, style = BtnStyle.Outline, small = true)
+                    }
+                    Spacer(Modifier.height(10.dp))
+                }
                 if (state.friends.isEmpty()) {
                     EmptyState("🤝", strings.emptyCompanions, strings.talk)
                 } else {
                     state.friends.forEach { f ->
-                        ListItem(
-                            icon = if (f.married) "💍" else "👤",
-                            title = "${f.name} · ${f.rel}",
-                            subtitle = "${f.at} · 好感 ${f.favor} · ${f.intro}",
-                            modifier = Modifier.padding(vertical = 4.dp),
-                            trail = {
+                        Column(Modifier.padding(vertical = 4.dp)) {
+                            ListItem(
+                                icon = if (f.married) "💍" else "👤",
+                                title = "${f.name} · ${f.rel}",
+                                subtitle = "${f.at} · 好感 ${f.favor} · ${f.intro}",
+                            )
+                            Spacer(Modifier.height(6.dp))
+                            LvjieFlow {
+                                if (f.traveling) {
+                                    LvjieButton("结束同行", onClick = { endName = f.name }, style = BtnStyle.Ghost, small = true)
+                                    LvjieButton("切磋", onClick = { onSpar(f.name) }, style = BtnStyle.Tonal, small = true)
+                                } else {
+                                    LvjieButton("邀请同行", onClick = { onToggleTravel(f.name) }, style = BtnStyle.Ghost, small = true)
+                                }
                                 if (!f.married && pack.marriage) {
                                     LvjieButton("求婚", onClick = { onPropose(f.name) }, style = BtnStyle.Tonal, small = true)
                                 }
-                            },
-                        )
+                            }
+                        }
                     }
                 }
             }
@@ -385,4 +473,75 @@ fun ProfileScreen(strings: com.lvjie.nativeapp.i18n.UiStrings = com.lvjie.native
             }
         }
     }
+
+    val ending = endName
+    if (ending != null) {
+        TravelChoiceDialog(
+            title = "结束同行",
+            body = "「$ending」要送回原处，还是留在原地？",
+            onReturn = {
+                onEndTravel(ending, true)
+                endName = null
+            },
+            onStay = {
+                onEndTravel(ending, false)
+                endName = null
+            },
+            onCancel = { endName = null },
+        )
+    }
+    if (dismissAll) {
+        TravelChoiceDialog(
+            title = "解散全队",
+            body = "将解除全部同行者。要送回原处，还是留在原地？",
+            onReturn = {
+                onDismissAll(true)
+                dismissAll = false
+            },
+            onStay = {
+                onDismissAll(false)
+                dismissAll = false
+            },
+            onCancel = { dismissAll = false },
+        )
+    }
 }
+
+@Composable
+private fun TravelChoiceDialog(
+    title: String,
+    body: String,
+    onReturn: () -> Unit,
+    onStay: () -> Unit,
+    onCancel: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onCancel,
+        title = { Text(title) },
+        text = {
+            Column {
+                Text(body, fontSize = 13.sp)
+                Spacer(Modifier.height(12.dp))
+                LvjieFlow {
+                    LvjieButton("送回原处", onClick = onReturn, small = true)
+                    LvjieButton("留在原地", onClick = onStay, style = BtnStyle.Outline, small = true)
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onCancel) { Text("取消") }
+        },
+    )
+}
+
+private fun named(raw: String): Boolean {
+    val name = raw.trim()
+    return name.isNotEmpty() && name != "未知" && name != "未知生物"
+}
+
+private fun beastDetail(realm: String, power: Int, drops: String): String =
+    listOfNotNull(
+        realm.trim().takeIf { it.isNotEmpty() && it != "未知" },
+        if (power > 0) "战力 $power" else null,
+        drops.trim().takeIf { it.isNotEmpty() && it != "未知" }?.let { "掉落 $it" },
+    ).joinToString(" · ").ifBlank { "在此" }

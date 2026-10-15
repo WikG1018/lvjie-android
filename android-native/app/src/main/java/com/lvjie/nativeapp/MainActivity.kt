@@ -133,6 +133,7 @@ fun AppRoot(
     val S = com.lvjie.nativeapp.i18n.I18n.of(state.lang)
     var showDelete by remember { mutableStateOf(false) }
     var showExitConfirm by remember { mutableStateOf(false) }
+    var downloadError by remember { mutableStateOf<String?>(null) }
 
     androidx.activity.compose.BackHandler(enabled = true) {
         if (screen == AppScreen.Game) showExitConfirm = true
@@ -195,6 +196,14 @@ fun AppRoot(
                     }.getOrDefault(""),
                     hasSave = hasSave,
                     onDeleteCustom = { id -> vm.removeCustomPack(id) },
+                    gender = state.gender,
+                    dialogLimit = state.dialogLimit,
+                    bgmOn = state.bgm,
+                    onGender = { vm.setGender(it) },
+                    onToggleLimit = { vm.toggleLimit() },
+                    onBgm = { vm.setBgm(it) },
+                    onExport = { vm.exportSaves() },
+                    onImport = { raw -> vm.importSaves(raw) },
                 )
                 AppScreen.Detail -> DetailScreen(
                     strings = com.lvjie.nativeapp.i18n.I18n.of(state.lang),
@@ -252,7 +261,19 @@ fun AppRoot(
                         onHint = { msg -> vm.debugHint(msg) },
                     )
                     GameTab.Map -> MapScreen(com.lvjie.nativeapp.i18n.I18n.of(state.lang), state, pack, onMove = { vm.moveTo(it) })
-                    GameTab.Profile -> ProfileScreen(com.lvjie.nativeapp.i18n.I18n.of(state.lang), state, pack, onBreakthrough = { vm.breakthrough() }, onPropose = { vm.propose(it) })
+                    GameTab.Profile -> ProfileScreen(
+                        strings = com.lvjie.nativeapp.i18n.I18n.of(state.lang),
+                        state = state,
+                        pack = pack,
+                        onBreakthrough = { vm.breakthrough() },
+                        onPropose = { vm.propose(it) },
+                        onToggleTravel = { vm.toggleTravel(it) },
+                        onSpar = { vm.spar(it) },
+                        teamPower = vm.teamPower().toString(),
+                        ageText = vm.ageText(),
+                        onEndTravel = { name, returnHome -> vm.endTravel(name, returnHome) },
+                        onDismissAll = { returnHome -> vm.dismissAll(returnHome) },
+                    )
                     GameTab.Bag -> BagScreen(com.lvjie.nativeapp.i18n.I18n.of(state.lang), state, pack, onUseItem = { vm.useItem(it) })
                     GameTab.Settings -> SettingsScreen(
                         strings = com.lvjie.nativeapp.i18n.I18n.of(state.lang),
@@ -260,11 +281,13 @@ fun AppRoot(
                         onAiStyle = { vm.setAiStyle(it) },
                         onLang = { vm.setLang(it) },
                         onToggleLimit = { vm.toggleLimit() },
-                        onToggleBgm = { vm.toggleBgm() },
+                        onToggleBgm = { vm.setBgm(!state.bgm) },
                         onApi = { onScreen(AppScreen.Api) },
                         onExport = { vm.exportSaves() },
                         onImport = { raw -> vm.importSaves(raw) },
                         onDelete = { showDelete = true },
+                        gender = state.gender,
+                        onGender = { vm.setGender(it) },
                     )
                 }
             }
@@ -274,7 +297,7 @@ fun AppRoot(
     // Toast（悬浮在整窗之上）
     if (feedback != null) {
         LaunchedEffect(feedback.message) {
-            delay(2200)
+            delay(2500)
             vm.clearFeedback()
         }
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
@@ -329,6 +352,14 @@ fun AppRoot(
     val exportPayload = exportJson
     if (exportPayload != null) {
         LaunchedEffect(exportPayload) {
+            val saved = runCatching { writeSaveToDownloads(context, exportPayload) }
+            val notes = mutableListOf<String>()
+            if (saved.isSuccess) {
+                notes += "已写入 Download/LvJie/lvjie-save.json"
+            } else {
+                val reason = saved.exceptionOrNull()?.message?.ifBlank { null } ?: "未知错误"
+                notes += "写入下载目录失败：$reason"
+            }
             val file = java.io.File(context.cacheDir, "exports/lvjie-save.json")
             file.parentFile?.mkdirs()
             file.writeText(exportPayload)
@@ -340,16 +371,28 @@ fun AppRoot(
                 putExtra(android.content.Intent.EXTRA_STREAM, uri)
                 addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
             }
-            val ok = runCatching {
+            val shareOk = runCatching {
                 context.startActivity(android.content.Intent.createChooser(intent, "分享存档 JSON"))
                 true
             }.getOrDefault(false)
-            if (ok) {
-                vm.clearExportJson()
-            } else {
-                vm.debugHint("分享失败，存档 JSON 已保留")
-            }
+            if (!shareOk) notes += "分享失败，存档 JSON 已保留"
+            val note = notes.joinToString("；")
+            if (saved.isFailure) downloadError = note
+            if (note.isNotBlank()) vm.debugHint(note)
+            if (shareOk) vm.clearExportJson()
         }
+    }
+
+    val failedDownload = downloadError
+    if (failedDownload != null) {
+        AlertDialog(
+            onDismissRequest = { downloadError = null },
+            title = { Text("写入下载目录失败") },
+            text = { Text(failedDownload) },
+            confirmButton = {
+                TextButton(onClick = { downloadError = null }) { Text(S.ok) }
+            },
+        )
     }
 
     if (showExitConfirm) {
@@ -472,5 +515,81 @@ private fun OnboardBar(current: AppScreen, onScreen: (AppScreen) -> Unit) {
                 ),
             )
         }
+    }
+}
+
+private const val SAVE_FILE_NAME = "lvjie-save.json"
+private const val SAVE_RELATIVE_DIR = "LvJie"
+
+/** 同一份不含 API Key 的 JSON。API 29+ 走 MediaStore，不申请存储权限。 */
+private fun writeSaveToDownloads(context: android.content.Context, json: String): String {
+    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+        writeSaveViaMediaStore(context, json)
+    } else {
+        writeSaveViaPublicDownloads(json)
+    }
+    return "Download/LvJie/$SAVE_FILE_NAME"
+}
+
+@androidx.annotation.RequiresApi(android.os.Build.VERSION_CODES.Q)
+private fun writeSaveViaMediaStore(context: android.content.Context, json: String) {
+    val resolver = context.contentResolver
+    val collection = android.provider.MediaStore.Downloads.EXTERNAL_CONTENT_URI
+    val relative = "${android.os.Environment.DIRECTORY_DOWNLOADS}/$SAVE_RELATIVE_DIR/"
+    val projection = arrayOf(
+        android.provider.MediaStore.Downloads._ID,
+        android.provider.MediaStore.Downloads.RELATIVE_PATH,
+    )
+    runCatching {
+        val stale = mutableListOf<android.net.Uri>()
+        resolver.query(
+            collection,
+            projection,
+            "${android.provider.MediaStore.Downloads.DISPLAY_NAME}=?",
+            arrayOf(SAVE_FILE_NAME),
+            null,
+        )?.use { cursor ->
+            val idCol = cursor.getColumnIndexOrThrow(android.provider.MediaStore.Downloads._ID)
+            val pathCol = cursor.getColumnIndexOrThrow(android.provider.MediaStore.Downloads.RELATIVE_PATH)
+            while (cursor.moveToNext()) {
+                val path = cursor.getString(pathCol).orEmpty()
+                if (!path.contains(SAVE_RELATIVE_DIR)) continue
+                stale += android.content.ContentUris.withAppendedId(collection, cursor.getLong(idCol))
+            }
+        }
+        stale.forEach { resolver.delete(it, null, null) }
+    }
+    val values = android.content.ContentValues().apply {
+        put(android.provider.MediaStore.Downloads.DISPLAY_NAME, SAVE_FILE_NAME)
+        put(android.provider.MediaStore.Downloads.MIME_TYPE, "application/json")
+        put(android.provider.MediaStore.Downloads.RELATIVE_PATH, relative)
+        put(android.provider.MediaStore.Downloads.IS_PENDING, 1)
+    }
+    val uri = resolver.insert(collection, values) ?: error("系统未返回下载文件地址")
+    try {
+        val bytes = json.toByteArray(Charsets.UTF_8)
+        resolver.openOutputStream(uri)?.use { it.write(bytes) } ?: error("无法打开下载文件")
+        values.clear()
+        values.put(android.provider.MediaStore.Downloads.IS_PENDING, 0)
+        if (resolver.update(uri, values, null, null) == 0) error("无法完成下载文件登记")
+        val written = resolver.openInputStream(uri)?.use { it.readBytes() } ?: error("写入后无法读回")
+        if (!written.contentEquals(bytes)) error("写入 Download/LvJie/$SAVE_FILE_NAME 后校验失败")
+    } catch (e: Throwable) {
+        resolver.delete(uri, null, null)
+        throw e
+    }
+}
+
+@Suppress("DEPRECATION")
+private fun writeSaveViaPublicDownloads(json: String) {
+    try {
+        val root = android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOWNLOADS)
+        val dir = java.io.File(root, SAVE_RELATIVE_DIR)
+        if (!dir.exists() && !dir.mkdirs()) error("无法创建下载目录 Download/LvJie")
+        val file = java.io.File(dir, SAVE_FILE_NAME)
+        file.writeText(json)
+        if (file.readText() != json) error("写入 Download/LvJie/$SAVE_FILE_NAME 后校验失败")
+    } catch (e: SecurityException) {
+        error("系统拒绝写入公共下载目录：${e.message ?: "无存储权限"}")
     }
 }
